@@ -10,7 +10,7 @@
     };
   };
 
-  outputs = { nixpkgs, flake-utils, substrate, ... }:
+  outputs = { self, nixpkgs, flake-utils, substrate, ... }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {
         inherit system;
@@ -75,5 +75,11 @@
         );
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
       };
-    });
+    }) // {
+      # Non-per-system outputs
+      homeManagerModules.default = import ./module;
+      overlays.default = final: prev: {
+        zoekt-mcp = self.packages.${final.system}.default;
+      };
+    };
 }
