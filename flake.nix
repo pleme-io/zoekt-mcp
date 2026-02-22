@@ -77,7 +77,9 @@
       };
     }) // {
       # Non-per-system outputs
-      homeManagerModules.default = import ./module;
+      homeManagerModules.default = import ./module {
+        hmHelpers = import "${substrate}/lib/hm-service-helpers.nix" { lib = nixpkgs.lib; };
+      };
       overlays.default = final: prev: {
         zoekt-mcp = self.packages.${final.system}.default;
       };

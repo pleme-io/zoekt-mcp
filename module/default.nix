@@ -8,6 +8,8 @@
 # Zoekt itself comes from nixpkgs (Go package). zoekt-mcp (this flake's package)
 # is the Rust MCP wrapper that talks to the webserver's HTTP/RPC API.
 #
+# Module factory: receives { hmHelpers } from flake.nix, returns HM module.
+{ hmHelpers }:
 {
   lib,
   config,
@@ -15,6 +17,10 @@
   ...
 }:
 with lib; let
+  inherit (hmHelpers)
+    mkMcpOptions mkMcpServerEntry
+    mkLaunchdService mkLaunchdPeriodicTask
+    mkSystemdService mkSystemdPeriodicTask;
   daemonCfg = config.services.zoekt.daemon;
   mcpCfg = config.services.zoekt.mcp;
   ctagsCfg = daemonCfg.ctags;
@@ -51,6 +57,21 @@ with lib; let
         ${concatStringsSep " " allArgs} \
         ${repoArgs}
     '';
+
+  # Webserver args (shared between Darwin and Linux)
+  webserverArgs = [
+    "-index" daemonCfg.indexDir
+    "-listen" ":${toString daemonCfg.port}"
+    "-log_dir" webCfg.logDir
+    "-log_refresh" webCfg.logRefresh
+  ]
+  ++ optionals webCfg.rpc ["-rpc"]
+  ++ optionals webCfg.pprof ["-pprof"]
+  ++ optionals (!webCfg.html) ["-html=false"];
+
+  logDir = if isDarwin
+    then "${config.home.homeDirectory}/Library/Logs"
+    else "${config.home.homeDirectory}/.local/share/zoekt/logs";
 in {
   options.services.zoekt = {
     # ── Daemon options ─────────────────────────────────────────────────
@@ -162,10 +183,7 @@ in {
 
         logDir = mkOption {
           type = types.str;
-          default =
-            if isDarwin
-            then "${config.home.homeDirectory}/Library/Logs/zoekt"
-            else "${config.home.homeDirectory}/.local/share/zoekt/logs";
+          default = logDir;
           description = "Directory for webserver log rotation (-log_dir).";
         };
 
@@ -177,137 +195,65 @@ in {
       };
     };
 
-    # ── MCP options ────────────────────────────────────────────────────
-    mcp = {
-      enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = "Generate MCP server entry for zoekt-mcp (consumed by claude modules)";
-      };
-
-      package = mkOption {
-        type = types.package;
-        default = pkgs.zoekt-mcp;
-        description = "zoekt-mcp package for MCP server binary";
-      };
-
-      serverEntry = mkOption {
-        type = types.attrs;
-        default = {};
-        internal = true;
-        description = "Generated MCP server attrset — consumed by claude module, not set by users";
-      };
+    # ── MCP options (from substrate hm-service-helpers) ───────────────
+    mcp = mkMcpOptions {
+      defaultPackage = pkgs.zoekt-mcp;
     };
   };
 
   # ── Config ─────────────────────────────────────────────────────────
   config = mkMerge [
-    # MCP server entry (always generated when mcp.enable is true)
+    # MCP server entry
     (mkIf mcpCfg.enable {
-      services.zoekt.mcp.serverEntry = {
-        type = "stdio";
+      services.zoekt.mcp.serverEntry = mkMcpServerEntry {
         command = "${mcpCfg.package}/bin/zoekt-mcp";
-        env = {
-          ZOEKT_URL = "http://localhost:${toString daemonCfg.port}";
-        };
+        env.ZOEKT_URL = "http://localhost:${toString daemonCfg.port}";
       };
     })
 
     # Darwin: launchd agents for zoekt-webserver + zoekt-indexer
-    (mkIf (daemonCfg.enable && isDarwin && daemonCfg.repos != []) {
-      home.activation.zoekt-index-dir = lib.hm.dag.entryAfter ["writeBoundary"] ''
-        run mkdir -p "${daemonCfg.indexDir}"
-        run mkdir -p "${webCfg.logDir}"
-      '';
+    (mkIf (daemonCfg.enable && isDarwin && daemonCfg.repos != []) (mkMerge [
+      {
+        home.activation.zoekt-index-dir = lib.hm.dag.entryAfter ["writeBoundary"] ''
+          run mkdir -p "${daemonCfg.indexDir}"
+          run mkdir -p "${webCfg.logDir}"
+        '';
+      }
 
-      launchd.agents.zoekt-webserver = {
-        enable = true;
-        config = {
-          Label = "io.pleme.zoekt-webserver";
-          ProgramArguments = [
-            "${daemonCfg.package}/bin/zoekt-webserver"
-            "-index"
-            daemonCfg.indexDir
-            "-listen"
-            ":${toString daemonCfg.port}"
-            "-log_dir"
-            webCfg.logDir
-            "-log_refresh"
-            webCfg.logRefresh
-          ]
-          ++ optionals webCfg.rpc ["-rpc"]
-          ++ optionals webCfg.pprof ["-pprof"]
-          ++ optionals (!webCfg.html) ["-html=false"];
-          RunAtLoad = true;
-          KeepAlive = true;
-          ProcessType = "Adaptive";
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/zoekt-webserver.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/zoekt-webserver.err";
-        };
-      };
+      (mkLaunchdService {
+        name = "zoekt-webserver";
+        label = "io.pleme.zoekt-webserver";
+        command = "${daemonCfg.package}/bin/zoekt-webserver";
+        args = webserverArgs;
+        logDir = "${config.home.homeDirectory}/Library/Logs";
+      })
 
-      launchd.agents.zoekt-indexer = {
-        enable = true;
-        config = {
-          Label = "io.pleme.zoekt-indexer";
-          ProgramArguments = ["${zoektIndexerScript}"];
-          StartInterval = daemonCfg.indexInterval;
-          RunAtLoad = true;
-          ProcessType = "Background";
-          LowPriorityIO = true;
-          Nice = 10;
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/zoekt-indexer.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/zoekt-indexer.err";
-        };
-      };
-    })
+      (mkLaunchdPeriodicTask {
+        name = "zoekt-indexer";
+        label = "io.pleme.zoekt-indexer";
+        command = "${zoektIndexerScript}";
+        interval = daemonCfg.indexInterval;
+        logDir = "${config.home.homeDirectory}/Library/Logs";
+      })
+    ]))
 
     # Linux: systemd user services for zoekt-webserver + zoekt-indexer
-    (mkIf (daemonCfg.enable && !isDarwin && daemonCfg.repos != []) {
-      systemd.user.services.zoekt-webserver = {
-        Unit = {
-          Description = "Zoekt webserver — trigram-indexed code search";
-          After = ["default.target"];
-        };
-        Service = {
-          Type = "simple";
-          ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p ${daemonCfg.indexDir} ${webCfg.logDir}";
-          ExecStart = concatStringsSep " " ([
-            "${daemonCfg.package}/bin/zoekt-webserver"
-            "-index" daemonCfg.indexDir
-            "-listen" ":${toString daemonCfg.port}"
-            "-log_dir" webCfg.logDir
-            "-log_refresh" webCfg.logRefresh
-          ]
-          ++ optionals webCfg.rpc ["-rpc"]
-          ++ optionals webCfg.pprof ["-pprof"]
-          ++ optionals (!webCfg.html) ["-html=false"]);
-          Restart = "on-failure";
-          RestartSec = 5;
-        };
-        Install.WantedBy = ["default.target"];
-      };
+    (mkIf (daemonCfg.enable && !isDarwin && daemonCfg.repos != []) (mkMerge [
+      (mkSystemdService {
+        name = "zoekt-webserver";
+        description = "Zoekt webserver — trigram-indexed code search";
+        command = "${daemonCfg.package}/bin/zoekt-webserver";
+        args = webserverArgs;
+        preStart = "${pkgs.coreutils}/bin/mkdir -p ${daemonCfg.indexDir} ${webCfg.logDir}";
+      })
 
-      systemd.user.services.zoekt-indexer = {
-        Unit = {
-          Description = "Zoekt periodic indexer";
-          After = ["zoekt-webserver.service"];
-        };
-        Service = {
-          Type = "oneshot";
-          ExecStart = "${zoektIndexerScript}";
-        };
-      };
-
-      systemd.user.timers.zoekt-indexer = {
-        Unit.Description = "Zoekt periodic indexer timer";
-        Timer = {
-          OnBootSec = "30s";
-          OnUnitActiveSec = "${toString daemonCfg.indexInterval}s";
-          Unit = "zoekt-indexer.service";
-        };
-        Install.WantedBy = ["timers.target"];
-      };
-    })
+      (mkSystemdPeriodicTask {
+        name = "zoekt-indexer";
+        description = "Zoekt periodic indexer";
+        command = "${zoektIndexerScript}";
+        interval = daemonCfg.indexInterval;
+        after = ["zoekt-webserver.service"];
+      })
+    ]))
   ];
 }
