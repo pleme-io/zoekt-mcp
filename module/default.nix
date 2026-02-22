@@ -195,7 +195,6 @@ in {
         type = types.attrs;
         default = {};
         internal = true;
-        readOnly = true;
         description = "Generated MCP server attrset — consumed by claude module, not set by users";
       };
     };
