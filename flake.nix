@@ -24,17 +24,16 @@
         cargoLock.lockFile = ./Cargo.lock;
 
         nativeBuildInputs = [ pkgs.pkg-config ];
-        buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
-          pkgs.libiconv
-        ] ++ (
-          if pkgs ? apple-sdk
-          then [ pkgs.apple-sdk ]
-          else pkgs.lib.optionals (pkgs ? darwin) (
-            with pkgs.darwin.apple_sdk.frameworks; [
-              Security
-              SystemConfiguration
-            ]
-          )
+        buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
+          [ pkgs.libiconv ]
+          ++ (if pkgs ? apple-sdk
+              then [ pkgs.apple-sdk ]
+              else pkgs.lib.optionals (pkgs ? darwin) (
+                with pkgs.darwin.apple_sdk.frameworks; [
+                  Security
+                  SystemConfiguration
+                ]
+              ))
         );
 
         meta = with pkgs.lib; {
@@ -61,17 +60,16 @@
           pkgs.rustc
           pkgs.pkg-config
         ];
-        buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
-          pkgs.libiconv
-        ] ++ (
-          if pkgs ? apple-sdk
-          then [ pkgs.apple-sdk ]
-          else pkgs.lib.optionals (pkgs ? darwin) (
-            with pkgs.darwin.apple_sdk.frameworks; [
-              Security
-              SystemConfiguration
-            ]
-          )
+        buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
+          [ pkgs.libiconv ]
+          ++ (if pkgs ? apple-sdk
+              then [ pkgs.apple-sdk ]
+              else pkgs.lib.optionals (pkgs ? darwin) (
+                with pkgs.darwin.apple_sdk.frameworks; [
+                  Security
+                  SystemConfiguration
+                ]
+              ))
         );
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
       };
