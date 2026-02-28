@@ -2,7 +2,7 @@
   description = "zoekt-mcp — MCP server wrapping Zoekt code search for Claude Code";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
     substrate = {
       url = "git+ssh://git@github.com/pleme-io/substrate.git";
