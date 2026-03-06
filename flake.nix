@@ -28,6 +28,11 @@
       toolName = "zoekt-mcp";
       src = self;
       repo = "pleme-io/zoekt-mcp";
+      crateOverrides = {
+        rmcp = attrs: {
+          CARGO_CRATE_NAME = "rmcp";
+        };
+      };
     }
     // {
       homeManagerModules.default = import ./module {
