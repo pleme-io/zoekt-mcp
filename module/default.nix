@@ -1,12 +1,12 @@
-# Zoekt home-manager module — daemon (webserver + indexer) + MCP server entry
+# Zoekt home-manager module — daemon (single process) + MCP server entry
 #
 # Namespace: services.zoekt.daemon.* / services.zoekt.mcp.*
 #
-# The daemon manages zoekt-webserver (persistent) + zoekt-git-index (periodic).
-# The MCP entry exposes a serverEntry attrset for consumption by claude modules.
+# The daemon reads a YAML config and manages zoekt-webserver + zoekt-git-index
+# as child processes (mirroring the codesearch daemon architecture).
 #
 # Zoekt itself comes from nixpkgs (Go package). zoekt-mcp (this flake's package)
-# is the Rust MCP wrapper that talks to the webserver's HTTP/RPC API.
+# is the Rust binary providing both the MCP server and the daemon.
 #
 # Module factory: receives { hmHelpers } from flake.nix, returns HM module.
 { hmHelpers }:
@@ -17,61 +17,62 @@
   ...
 }:
 with lib; let
-  inherit (hmHelpers)
-    mkMcpOptions mkMcpServerEntry
-    mkLaunchdService mkLaunchdPeriodicTask
-    mkSystemdService mkSystemdPeriodicTask;
+  inherit (hmHelpers) mkMcpOptions mkMcpServerEntry mkLaunchdService mkSystemdService;
   daemonCfg = config.services.zoekt.daemon;
   mcpCfg = config.services.zoekt.mcp;
   ctagsCfg = daemonCfg.ctags;
+  githubCfg = daemonCfg.github;
   webCfg = daemonCfg.webserver;
   isDarwin = pkgs.stdenv.isDarwin;
-
-  # ── Zoekt indexer wrapper (ensures ctags is on PATH) ─────────────────
-  zoektIndexerScript = let
-    ctagsArgs =
-      if ctagsCfg.enable
-      then (optionals ctagsCfg.require ["-require_ctags"])
-      else ["-disable_ctags"];
-    deltaArgs = optionals daemonCfg.delta ["-delta"];
-    branchArgs = optionals (daemonCfg.branches != "HEAD") ["-branches" daemonCfg.branches];
-    largeFileArgs = concatMap (p: ["-large_file" p]) daemonCfg.largeFiles;
-    parallelismArgs = ["-parallelism" (toString daemonCfg.parallelism)];
-    fileLimitArgs = ["-file_limit" (toString daemonCfg.fileLimit)];
-    allArgs = ctagsArgs ++ deltaArgs ++ branchArgs ++ largeFileArgs ++ parallelismArgs ++ fileLimitArgs;
-    repoArgs = concatStringsSep " " (map (r: ''"${r}"'') daemonCfg.repos);
-    ctagsPath =
-      if ctagsCfg.enable
-      then "${ctagsCfg.package}/bin"
-      else "";
-  in
-    pkgs.writeShellScript "zoekt-indexer" ''
-      ${optionalString isDarwin ''
-      logDir="${config.home.homeDirectory}/Library/Logs"
-      : > "$logDir/zoekt-indexer.log"
-      : > "$logDir/zoekt-indexer.err"
-      ''}
-      export PATH="${ctagsPath}:${daemonCfg.package}/bin:${pkgs.git}/bin:$PATH"
-      exec zoekt-git-index \
-        -index "${daemonCfg.indexDir}" \
-        ${concatStringsSep " " allArgs} \
-        ${repoArgs}
-    '';
-
-  # Webserver args (shared between Darwin and Linux)
-  webserverArgs = [
-    "-index" daemonCfg.indexDir
-    "-listen" ":${toString daemonCfg.port}"
-    "-log_dir" webCfg.logDir
-    "-log_refresh" webCfg.logRefresh
-  ]
-  ++ optionals webCfg.rpc ["-rpc"]
-  ++ optionals webCfg.pprof ["-pprof"]
-  ++ optionals (!webCfg.html) ["-html=false"];
 
   logDir = if isDarwin
     then "${config.home.homeDirectory}/Library/Logs"
     else "${config.home.homeDirectory}/.local/share/zoekt/logs";
+
+  # ── Daemon YAML config (generated from nix options) ──────────────────
+  zoektDaemonConfig = pkgs.writeText "zoekt-daemon.yaml"
+    (builtins.toJSON ({
+      port = daemonCfg.port;
+      index_dir = daemonCfg.indexDir;
+      index_interval = daemonCfg.indexInterval;
+      zoekt_bin = "${daemonCfg.package}/bin";
+      git_bin = "${pkgs.git}/bin";
+      delta = daemonCfg.delta;
+      branches = daemonCfg.branches;
+      parallelism = daemonCfg.parallelism;
+      file_limit = daemonCfg.fileLimit;
+      large_files = daemonCfg.largeFiles;
+      repos = daemonCfg.repos;
+      ctags = {
+        enable = ctagsCfg.enable;
+        require = ctagsCfg.require;
+      };
+      webserver = {
+        rpc = webCfg.rpc;
+        html = webCfg.html;
+        pprof = webCfg.pprof;
+        log_dir = webCfg.logDir;
+        log_refresh = webCfg.logRefresh;
+      };
+    }
+    // optionalAttrs ctagsCfg.enable {
+      ctags_bin = "${ctagsCfg.package}/bin";
+    }
+    // optionalAttrs githubCfg.enable {
+      github = {
+        sources = map (s: {
+          owner = s.owner;
+          kind = s.kind;
+          clone_base = s.cloneBase;
+          auto_clone = s.autoClone;
+          skip_archived = s.skipArchived;
+          skip_forks = s.skipForks;
+          exclude = s.exclude;
+        }) githubCfg.sources;
+      } // optionalAttrs (githubCfg.tokenFile != null) {
+        token_file = githubCfg.tokenFile;
+      };
+    }));
 in {
   options.services.zoekt = {
     # ── Daemon options ─────────────────────────────────────────────────
@@ -129,7 +130,7 @@ in {
       indexInterval = mkOption {
         type = types.int;
         default = 300;
-        description = "Re-index interval in seconds (launchd StartInterval / systemd timer OnUnitActiveSec)";
+        description = "Re-index interval in seconds";
       };
 
       delta = mkOption {
@@ -160,6 +161,62 @@ in {
         type = types.int;
         default = 2097152;
         description = "Maximum file size in bytes to index (-file_limit). Default 2 MiB matches upstream.";
+      };
+
+      github = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable GitHub auto-discovery of repos (list org/user repos, resolve to local clones)";
+        };
+
+        tokenFile = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          description = "Path to file containing GitHub token. Supports ~ for home dir. Falls back to GITHUB_TOKEN env var.";
+        };
+
+        sources = mkOption {
+          type = types.listOf (types.submodule {
+            options = {
+              owner = mkOption {
+                type = types.str;
+                description = "GitHub owner name (org or username)";
+              };
+              kind = mkOption {
+                type = types.enum ["org" "user"];
+                default = "org";
+                description = "Whether this is an organization or user account";
+              };
+              cloneBase = mkOption {
+                type = types.str;
+                description = "Local directory where repos are/should be cloned";
+              };
+              autoClone = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Automatically clone repos that don't exist locally";
+              };
+              skipArchived = mkOption {
+                type = types.bool;
+                default = true;
+                description = "Skip archived repositories";
+              };
+              skipForks = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Skip forked repositories";
+              };
+              exclude = mkOption {
+                type = types.listOf types.str;
+                default = [];
+                description = "Glob patterns to exclude repo names (e.g. [\"*.wiki\" \"legacy-*\"])";
+              };
+            };
+          });
+          default = [];
+          description = "GitHub sources to discover repos from";
+        };
       };
 
       webserver = {
@@ -211,8 +268,8 @@ in {
       };
     })
 
-    # Darwin: launchd agents for zoekt-webserver + zoekt-indexer
-    (mkIf (daemonCfg.enable && isDarwin && daemonCfg.repos != []) (mkMerge [
+    # Darwin: single launchd agent for zoekt-daemon
+    (mkIf (daemonCfg.enable && isDarwin && (daemonCfg.repos != [] || githubCfg.enable)) (mkMerge [
       {
         home.activation.zoekt-index-dir = lib.hm.dag.entryAfter ["writeBoundary"] ''
           run mkdir -p "${daemonCfg.indexDir}"
@@ -221,39 +278,21 @@ in {
       }
 
       (mkLaunchdService {
-        name = "zoekt-webserver";
-        label = "io.pleme.zoekt-webserver";
-        command = "${daemonCfg.package}/bin/zoekt-webserver";
-        args = webserverArgs;
-        logDir = "${config.home.homeDirectory}/Library/Logs";
-      })
-
-      (mkLaunchdPeriodicTask {
-        name = "zoekt-indexer";
-        label = "io.pleme.zoekt-indexer";
-        command = "${zoektIndexerScript}";
-        interval = daemonCfg.indexInterval;
+        name = "zoekt-daemon";
+        label = "io.pleme.zoekt-daemon";
+        command = "${mcpCfg.package}/bin/zoekt-mcp";
+        args = ["daemon" "--config" "${zoektDaemonConfig}"];
         logDir = "${config.home.homeDirectory}/Library/Logs";
       })
     ]))
 
-    # Linux: systemd user services for zoekt-webserver + zoekt-indexer
-    (mkIf (daemonCfg.enable && !isDarwin && daemonCfg.repos != []) (mkMerge [
+    # Linux: single systemd service for zoekt-daemon
+    (mkIf (daemonCfg.enable && !isDarwin && (daemonCfg.repos != [] || githubCfg.enable))
       (mkSystemdService {
-        name = "zoekt-webserver";
-        description = "Zoekt webserver — trigram-indexed code search";
-        command = "${daemonCfg.package}/bin/zoekt-webserver";
-        args = webserverArgs;
-        preStart = "${pkgs.coreutils}/bin/mkdir -p ${daemonCfg.indexDir} ${webCfg.logDir}";
-      })
-
-      (mkSystemdPeriodicTask {
-        name = "zoekt-indexer";
-        description = "Zoekt periodic indexer";
-        command = "${zoektIndexerScript}";
-        interval = daemonCfg.indexInterval;
-        after = ["zoekt-webserver.service"];
-      })
-    ]))
+        name = "zoekt-daemon";
+        description = "Zoekt daemon — trigram-indexed code search";
+        command = "${mcpCfg.package}/bin/zoekt-mcp";
+        args = ["daemon" "--config" "${zoektDaemonConfig}"];
+      }))
   ];
 }
