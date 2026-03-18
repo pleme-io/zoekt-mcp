@@ -1,0 +1,17 @@
+{ hmHelpers }:
+{ lib, config, pkgs, ... }:
+with lib; let
+  inherit (hmHelpers) mkMcpOptions mkMcpServerEntry mkAnvilRegistration mkLaunchdService mkSystemdService;
+in {
+  options.services.zoekt = {
+    daemon.enable = mkOption { type = types.bool; default = false; };
+    daemon.port = mkOption { type = types.int; default = 6070; };
+    daemon.package = mkOption { type = types.package; default = pkgs.zoekt; };
+    mcp = mkMcpOptions { defaultPackage = pkgs.zoekt-mcp; };
+  };
+  config = mkAnvilRegistration {
+    name = "zoekt";
+    command = "zoekt-mcp";
+    description = "test";
+  };
+}

@@ -17,7 +17,7 @@
   ...
 }:
 with lib; let
-  inherit (hmHelpers) mkMcpOptions mkMcpServerEntry mkAnvilRegistration mkLaunchdService mkSystemdService;
+  inherit (hmHelpers) mkMcpOptions mkMcpServerEntry mkLaunchdService mkSystemdService;
   daemonCfg = config.services.zoekt.daemon;
   mcpCfg = config.services.zoekt.mcp;
   ctagsCfg = daemonCfg.ctags;
@@ -260,19 +260,7 @@ in {
 
   # ── Config ─────────────────────────────────────────────────────────
   config = mkMerge [
-    # Self-register with anvil unconditionally — enable flag controls activation.
-    # Do NOT wrap in mkIf — it causes infinite recursion during module fixpoint.
-    (mkAnvilRegistration {
-      name = "zoekt";
-      command = "zoekt-mcp";
-      package = mcpCfg.package;
-      enable = mcpCfg.enable;
-      env.ZOEKT_URL = "http://localhost:${toString daemonCfg.port}";
-      description = "Zoekt trigram code search";
-      scopes = mcpCfg.scopes;
-    })
-
-    # Deprecated: serverEntry (kept for backward compatibility)
+    # MCP server entry
     (mkIf mcpCfg.enable {
       services.zoekt.mcp.serverEntry = mkMcpServerEntry {
         command = "${mcpCfg.package}/bin/zoekt-mcp";
