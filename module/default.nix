@@ -260,15 +260,17 @@ in {
 
   # ── Config ─────────────────────────────────────────────────────────
   config = mkMerge [
-    # Self-register with anvil (primary path)
-    (mkIf mcpCfg.enable (mkAnvilRegistration {
+    # Self-register with anvil unconditionally — enable flag controls activation.
+    # Do NOT wrap in mkIf — it causes infinite recursion during module fixpoint.
+    (mkAnvilRegistration {
       name = "zoekt";
       command = "zoekt-mcp";
       package = mcpCfg.package;
+      enable = mcpCfg.enable;
       env.ZOEKT_URL = "http://localhost:${toString daemonCfg.port}";
       description = "Zoekt trigram code search";
       scopes = mcpCfg.scopes;
-    }))
+    })
 
     # Deprecated: serverEntry (kept for backward compatibility)
     (mkIf mcpCfg.enable {
