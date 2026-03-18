@@ -17,7 +17,7 @@
   ...
 }:
 with lib; let
-  inherit (hmHelpers) mkMcpOptions mkMcpServerEntry mkLaunchdService mkSystemdService;
+  inherit (hmHelpers) mkMcpOptions mkMcpServerEntry mkAnvilRegistration mkLaunchdService mkSystemdService;
   daemonCfg = config.services.zoekt.daemon;
   mcpCfg = config.services.zoekt.mcp;
   ctagsCfg = daemonCfg.ctags;
@@ -260,7 +260,17 @@ in {
 
   # ── Config ─────────────────────────────────────────────────────────
   config = mkMerge [
-    # MCP server entry
+    # Self-register with anvil (primary path)
+    (mkIf mcpCfg.enable (mkAnvilRegistration {
+      name = "zoekt";
+      command = "zoekt-mcp";
+      package = mcpCfg.package;
+      env.ZOEKT_URL = "http://localhost:${toString daemonCfg.port}";
+      description = "Zoekt trigram code search";
+      scopes = mcpCfg.scopes;
+    }))
+
+    # Deprecated: serverEntry (kept for backward compatibility)
     (mkIf mcpCfg.enable {
       services.zoekt.mcp.serverEntry = mkMcpServerEntry {
         command = "${mcpCfg.package}/bin/zoekt-mcp";
