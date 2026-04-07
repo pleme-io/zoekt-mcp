@@ -516,3 +516,700 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     server.waiting().await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── decode_b64 ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_decode_b64_empty_string() {
+        assert_eq!(decode_b64(""), "");
+    }
+
+    #[test]
+    fn test_decode_b64_valid_base64() {
+        let encoded = B64.encode("hello world");
+        assert_eq!(decode_b64(&encoded), "hello world");
+    }
+
+    #[test]
+    fn test_decode_b64_plain_text_fallback() {
+        // If a string isn't valid base64, decode_b64 falls back to the raw string.
+        // "hello world" is not valid base64 (contains a space).
+        assert_eq!(decode_b64("hello world"), "hello world");
+    }
+
+    #[test]
+    fn test_decode_b64_valid_base64_with_special_chars() {
+        let text = "fn main() {\n    println!(\"hello\");\n}";
+        let encoded = B64.encode(text);
+        assert_eq!(decode_b64(&encoded), text);
+    }
+
+    #[test]
+    fn test_decode_b64_invalid_utf8_falls_back() {
+        // Encode raw bytes that aren't valid UTF-8
+        let bad_bytes: [u8; 4] = [0xff, 0xfe, 0xfd, 0xfc];
+        let encoded = B64.encode(bad_bytes);
+        // decode succeeds as bytes but from_utf8 fails → falls back to raw string
+        let result = decode_b64(&encoded);
+        assert_eq!(result, encoded);
+    }
+
+    // ── format_files ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_format_files_empty() {
+        let result = SearchResult {
+            match_count: 0,
+            file_count: 0,
+            duration: 0,
+            files: None,
+        };
+        let out = format_files(&result);
+        assert!(out.contains("Found 0 files"));
+    }
+
+    #[test]
+    fn test_format_files_with_results() {
+        let result = SearchResult {
+            match_count: 5,
+            file_count: 2,
+            duration: 100,
+            files: Some(vec![
+                FileMatch {
+                    file_name: "src/main.rs".to_string(),
+                    repository: "myrepo".to_string(),
+                    language: "Rust".to_string(),
+                    branches: vec![],
+                    version: String::new(),
+                    chunk_matches: None,
+                    line_matches: None,
+                    content: String::new(),
+                    score: 1.0,
+                },
+                FileMatch {
+                    file_name: "src/lib.rs".to_string(),
+                    repository: "myrepo".to_string(),
+                    language: "Rust".to_string(),
+                    branches: vec![],
+                    version: String::new(),
+                    chunk_matches: None,
+                    line_matches: None,
+                    content: String::new(),
+                    score: 0.5,
+                },
+            ]),
+        };
+        let out = format_files(&result);
+        assert!(out.contains("Found 2 files"));
+        assert!(out.contains("src/main.rs"));
+        assert!(out.contains("src/lib.rs"));
+    }
+
+    #[test]
+    fn test_format_files_empty_vec() {
+        let result = SearchResult {
+            match_count: 0,
+            file_count: 0,
+            duration: 0,
+            files: Some(vec![]),
+        };
+        let out = format_files(&result);
+        assert!(out.contains("Found 0 files"));
+    }
+
+    // ── format_count ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_format_count_empty() {
+        let result = SearchResult {
+            match_count: 0,
+            file_count: 0,
+            duration: 0,
+            files: None,
+        };
+        let out = format_count(&result);
+        assert!(out.contains("0 matches in 0 files"));
+    }
+
+    #[test]
+    fn test_format_count_with_chunk_matches() {
+        let result = SearchResult {
+            match_count: 3,
+            file_count: 1,
+            duration: 50,
+            files: Some(vec![FileMatch {
+                file_name: "src/main.rs".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: Some(vec![
+                    ChunkMatch {
+                        content: B64.encode("line1\nline2"),
+                        content_start: Location { byte_offset: 0, line_number: 1, column: 0 },
+                        ranges: vec![
+                            Range {
+                                start: Location { byte_offset: 0, line_number: 1, column: 0 },
+                                end: Location { byte_offset: 5, line_number: 1, column: 5 },
+                            },
+                            Range {
+                                start: Location { byte_offset: 6, line_number: 2, column: 0 },
+                                end: Location { byte_offset: 11, line_number: 2, column: 5 },
+                            },
+                        ],
+                        symbol_info: None,
+                        score: 1.0,
+                    },
+                ]),
+                line_matches: None,
+                content: String::new(),
+                score: 1.0,
+            }]),
+        };
+        let out = format_count(&result);
+        assert!(out.contains("3 matches in 1 files"));
+        assert!(out.contains("src/main.rs:2"));
+    }
+
+    #[test]
+    fn test_format_count_with_line_matches() {
+        let result = SearchResult {
+            match_count: 2,
+            file_count: 1,
+            duration: 50,
+            files: Some(vec![FileMatch {
+                file_name: "test.py".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: None,
+                line_matches: Some(vec![
+                    LineMatch {
+                        line: B64.encode("import foo"),
+                        line_number: 1,
+                        before: None,
+                        after: None,
+                        file_name_match: false,
+                    },
+                    LineMatch {
+                        line: B64.encode("import bar"),
+                        line_number: 5,
+                        before: None,
+                        after: None,
+                        file_name_match: false,
+                    },
+                ]),
+                content: String::new(),
+                score: 1.0,
+            }]),
+        };
+        let out = format_count(&result);
+        assert!(out.contains("test.py:2"));
+    }
+
+    #[test]
+    fn test_format_count_no_matches_in_file() {
+        let result = SearchResult {
+            match_count: 0,
+            file_count: 1,
+            duration: 0,
+            files: Some(vec![FileMatch {
+                file_name: "empty.rs".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: None,
+                line_matches: None,
+                content: String::new(),
+                score: 0.0,
+            }]),
+        };
+        let out = format_count(&result);
+        assert!(out.contains("empty.rs:0"));
+    }
+
+    // ── format_repos ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_format_repos_empty() {
+        let resp = ListResponse {
+            list: RepoList { repos: None },
+        };
+        let out = format_repos(&resp);
+        assert!(out.contains("0 repositories indexed"));
+    }
+
+    #[test]
+    fn test_format_repos_with_data() {
+        let resp = ListResponse {
+            list: RepoList {
+                repos: Some(vec![
+                    RepoEntry {
+                        repository: RepoInfo {
+                            name: "myrepo".to_string(),
+                            url: "https://github.com/test/myrepo".to_string(),
+                            branches: vec![
+                                BranchInfo {
+                                    name: "main".to_string(),
+                                    version: "abc123def456".to_string(),
+                                },
+                            ],
+                            has_symbols: true,
+                        },
+                        stats: RepoStats {
+                            documents: 150,
+                            content_bytes: 5_242_880, // 5 MB
+                            index_bytes: 2_621_440,   // 2.5 MB
+                        },
+                    },
+                ]),
+            },
+        };
+        let out = format_repos(&resp);
+        assert!(out.contains("1 repositories indexed"));
+        assert!(out.contains("myrepo"));
+        assert!(out.contains("150 files"));
+        assert!(out.contains("5.0 MB content"));
+        assert!(out.contains("2.5 MB index"));
+        assert!(out.contains("[symbols]"));
+        assert!(out.contains("branch: main"));
+        // Version should be truncated to 10 chars
+        assert!(out.contains("abc123def4"));
+    }
+
+    #[test]
+    fn test_format_repos_no_symbols() {
+        let resp = ListResponse {
+            list: RepoList {
+                repos: Some(vec![
+                    RepoEntry {
+                        repository: RepoInfo {
+                            name: "nosyms".to_string(),
+                            url: String::new(),
+                            branches: vec![],
+                            has_symbols: false,
+                        },
+                        stats: RepoStats {
+                            documents: 10,
+                            content_bytes: 1024,
+                            index_bytes: 512,
+                        },
+                    },
+                ]),
+            },
+        };
+        let out = format_repos(&resp);
+        assert!(!out.contains("[symbols]"));
+    }
+
+    #[test]
+    fn test_format_repos_short_version_not_truncated() {
+        let resp = ListResponse {
+            list: RepoList {
+                repos: Some(vec![
+                    RepoEntry {
+                        repository: RepoInfo {
+                            name: "r".to_string(),
+                            url: String::new(),
+                            branches: vec![
+                                BranchInfo {
+                                    name: "main".to_string(),
+                                    version: "short".to_string(),
+                                },
+                            ],
+                            has_symbols: false,
+                        },
+                        stats: RepoStats {
+                            documents: 1,
+                            content_bytes: 0,
+                            index_bytes: 0,
+                        },
+                    },
+                ]),
+            },
+        };
+        let out = format_repos(&resp);
+        assert!(out.contains("(short)"));
+    }
+
+    // ── format_content ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_format_content_empty() {
+        let result = SearchResult {
+            match_count: 0,
+            file_count: 0,
+            duration: 0,
+            files: None,
+        };
+        let out = format_content(&result);
+        assert!(out.contains("0 matches in 0 files"));
+    }
+
+    #[test]
+    fn test_format_content_with_chunk_matches() {
+        let result = SearchResult {
+            match_count: 1,
+            file_count: 1,
+            duration: 10,
+            files: Some(vec![FileMatch {
+                file_name: "src/lib.rs".to_string(),
+                repository: "testrepo".to_string(),
+                language: "Rust".to_string(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: Some(vec![ChunkMatch {
+                    content: B64.encode("fn hello() {\n    println!(\"hi\");\n}"),
+                    content_start: Location { byte_offset: 0, line_number: 10, column: 0 },
+                    ranges: vec![Range {
+                        start: Location { byte_offset: 0, line_number: 10, column: 0 },
+                        end: Location { byte_offset: 12, line_number: 10, column: 12 },
+                    }],
+                    symbol_info: None,
+                    score: 1.0,
+                }]),
+                line_matches: None,
+                content: String::new(),
+                score: 1.0,
+            }]),
+        };
+        let out = format_content(&result);
+        assert!(out.contains("1 matches in 1 files"));
+        assert!(out.contains("--- src/lib.rs (Rust) ---"));
+        assert!(out.contains(">10:fn hello()"));
+        // Non-match lines should have space prefix
+        assert!(out.contains(" 11:"));
+        assert!(out.contains(" 12:"));
+    }
+
+    #[test]
+    fn test_format_content_with_symbol_info() {
+        let result = SearchResult {
+            match_count: 1,
+            file_count: 1,
+            duration: 10,
+            files: Some(vec![FileMatch {
+                file_name: "main.go".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: Some(vec![ChunkMatch {
+                    content: B64.encode("func Run()"),
+                    content_start: Location { byte_offset: 0, line_number: 1, column: 0 },
+                    ranges: vec![Range {
+                        start: Location { byte_offset: 0, line_number: 1, column: 0 },
+                        end: Location { byte_offset: 10, line_number: 1, column: 10 },
+                    }],
+                    symbol_info: Some(vec![Some(SymbolInfo {
+                        sym: "Run".to_string(),
+                        kind: "function".to_string(),
+                        parent: "main".to_string(),
+                        parent_kind: "package".to_string(),
+                    })]),
+                    score: 1.0,
+                }]),
+                line_matches: None,
+                content: String::new(),
+                score: 1.0,
+            }]),
+        };
+        let out = format_content(&result);
+        assert!(out.contains("symbol: Run [function] in main"));
+    }
+
+    #[test]
+    fn test_format_content_symbol_no_parent_no_kind() {
+        let result = SearchResult {
+            match_count: 1,
+            file_count: 1,
+            duration: 0,
+            files: Some(vec![FileMatch {
+                file_name: "test.rs".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: Some(vec![ChunkMatch {
+                    content: B64.encode("x"),
+                    content_start: Location { byte_offset: 0, line_number: 1, column: 0 },
+                    ranges: vec![],
+                    symbol_info: Some(vec![Some(SymbolInfo {
+                        sym: "Foo".to_string(),
+                        kind: String::new(),
+                        parent: String::new(),
+                        parent_kind: String::new(),
+                    })]),
+                    score: 0.0,
+                }]),
+                line_matches: None,
+                content: String::new(),
+                score: 0.0,
+            }]),
+        };
+        let out = format_content(&result);
+        assert!(out.contains("symbol: Foo\n"));
+        // No kind bracket and no parent " in " should appear in the symbol line
+        let sym_line = out.lines().find(|l| l.contains("symbol:")).unwrap();
+        assert!(!sym_line.contains("["), "kind bracket should be absent: {sym_line}");
+        assert!(!sym_line.contains(" in "), "parent should be absent: {sym_line}");
+    }
+
+    #[test]
+    fn test_format_content_with_line_matches() {
+        let result = SearchResult {
+            match_count: 1,
+            file_count: 1,
+            duration: 0,
+            files: Some(vec![FileMatch {
+                file_name: "script.py".to_string(),
+                repository: String::new(),
+                language: "Python".to_string(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: None,
+                line_matches: Some(vec![LineMatch {
+                    line: B64.encode("import os"),
+                    line_number: 3,
+                    before: Some(B64.encode("# header\n# comment")),
+                    after: Some(B64.encode("import sys")),
+                    file_name_match: false,
+                }]),
+                content: String::new(),
+                score: 1.0,
+            }]),
+        };
+        let out = format_content(&result);
+        assert!(out.contains("--- script.py (Python) ---"));
+        assert!(out.contains(">3: import os"));
+        // Context after
+        assert!(out.contains("4:import sys"));
+    }
+
+    #[test]
+    fn test_format_content_line_match_no_context() {
+        let result = SearchResult {
+            match_count: 1,
+            file_count: 1,
+            duration: 0,
+            files: Some(vec![FileMatch {
+                file_name: "a.txt".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: None,
+                line_matches: Some(vec![LineMatch {
+                    line: B64.encode("match line"),
+                    line_number: 1,
+                    before: None,
+                    after: None,
+                    file_name_match: false,
+                }]),
+                content: String::new(),
+                score: 0.0,
+            }]),
+        };
+        let out = format_content(&result);
+        assert!(out.contains(">1: match line"));
+    }
+
+    #[test]
+    fn test_format_content_no_language() {
+        let result = SearchResult {
+            match_count: 0,
+            file_count: 1,
+            duration: 0,
+            files: Some(vec![FileMatch {
+                file_name: "Makefile".to_string(),
+                repository: String::new(),
+                language: String::new(),
+                branches: vec![],
+                version: String::new(),
+                chunk_matches: None,
+                line_matches: None,
+                content: String::new(),
+                score: 0.0,
+            }]),
+        };
+        let out = format_content(&result);
+        // No language → no parenthetical
+        assert!(out.contains("--- Makefile ---"));
+        assert!(!out.contains("()"));
+    }
+
+    // ── Serde round-trip tests for API types ────────────────────────────
+
+    #[test]
+    fn test_search_request_serialization() {
+        let req = SearchRequest {
+            q: "fn main".to_string(),
+            opts: Some(SearchOpts {
+                max_doc_display_count: 10,
+                num_context_lines: 2,
+                chunk_matches: true,
+                whole: false,
+            }),
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"Q\":\"fn main\""));
+        assert!(json.contains("\"MaxDocDisplayCount\":10"));
+        assert!(json.contains("\"NumContextLines\":2"));
+        assert!(json.contains("\"ChunkMatches\":true"));
+        assert!(json.contains("\"Whole\":false"));
+    }
+
+    #[test]
+    fn test_search_request_without_opts() {
+        let req = SearchRequest {
+            q: "test".to_string(),
+            opts: None,
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"Q\":\"test\""));
+        assert!(!json.contains("Opts"));
+    }
+
+    #[test]
+    fn test_list_request_serialization() {
+        let req = ListRequest {
+            q: "repo:test".to_string(),
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"Q\":\"repo:test\""));
+    }
+
+    #[test]
+    fn test_search_response_deserialization() {
+        let json = r#"{
+            "Result": {
+                "MatchCount": 42,
+                "FileCount": 5,
+                "Duration": 1000,
+                "Files": null
+            }
+        }"#;
+        let resp: SearchResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.result.match_count, 42);
+        assert_eq!(resp.result.file_count, 5);
+        assert_eq!(resp.result.duration, 1000);
+        assert!(resp.result.files.is_none());
+    }
+
+    #[test]
+    fn test_search_response_missing_duration_defaults() {
+        let json = r#"{
+            "Result": {
+                "MatchCount": 1,
+                "FileCount": 1,
+                "Files": []
+            }
+        }"#;
+        let resp: SearchResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.result.duration, 0);
+        assert!(resp.result.files.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_list_response_deserialization() {
+        let json = r#"{
+            "List": {
+                "Repos": [
+                    {
+                        "Repository": {
+                            "Name": "testrepo",
+                            "URL": "https://github.com/test/repo",
+                            "Branches": [
+                                {"Name": "main", "Version": "abc123"}
+                            ],
+                            "HasSymbols": true
+                        },
+                        "Stats": {
+                            "Documents": 100,
+                            "ContentBytes": 1048576,
+                            "IndexBytes": 524288
+                        }
+                    }
+                ]
+            }
+        }"#;
+        let resp: ListResponse = serde_json::from_str(json).unwrap();
+        let repos = resp.list.repos.unwrap();
+        assert_eq!(repos.len(), 1);
+        assert_eq!(repos[0].repository.name, "testrepo");
+        assert!(repos[0].repository.has_symbols);
+        assert_eq!(repos[0].repository.branches.len(), 1);
+        assert_eq!(repos[0].repository.branches[0].name, "main");
+        assert_eq!(repos[0].stats.documents, 100);
+        assert_eq!(repos[0].stats.content_bytes, 1_048_576);
+    }
+
+    #[test]
+    fn test_list_response_null_repos() {
+        let json = r#"{"List": {"Repos": null}}"#;
+        let resp: ListResponse = serde_json::from_str(json).unwrap();
+        assert!(resp.list.repos.is_none());
+    }
+
+    #[test]
+    fn test_file_match_deserialization_with_defaults() {
+        let json = r#"{
+            "FileName": "test.rs",
+            "ChunkMatches": null
+        }"#;
+        let fm: FileMatch = serde_json::from_str(json).unwrap();
+        assert_eq!(fm.file_name, "test.rs");
+        assert_eq!(fm.repository, "");
+        assert_eq!(fm.language, "");
+        assert!(fm.branches.is_empty());
+        assert_eq!(fm.version, "");
+        assert!(fm.chunk_matches.is_none());
+        assert!(fm.line_matches.is_none());
+        assert_eq!(fm.content, "");
+        assert_eq!(fm.score, 0.0);
+    }
+
+    #[test]
+    fn test_chunk_match_deserialization() {
+        let json = r#"{
+            "Content": "aGVsbG8=",
+            "ContentStart": {"ByteOffset": 0, "LineNumber": 1, "Column": 0},
+            "Ranges": [
+                {
+                    "Start": {"ByteOffset": 0, "LineNumber": 1, "Column": 0},
+                    "End": {"ByteOffset": 5, "LineNumber": 1, "Column": 5}
+                }
+            ],
+            "SymbolInfo": null
+        }"#;
+        let cm: ChunkMatch = serde_json::from_str(json).unwrap();
+        assert_eq!(cm.content, "aGVsbG8=");
+        assert_eq!(cm.content_start.line_number, 1);
+        assert_eq!(cm.ranges.len(), 1);
+        assert_eq!(cm.ranges[0].start.column, 0);
+        assert_eq!(cm.ranges[0].end.column, 5);
+        assert!(cm.symbol_info.is_none());
+    }
+
+    #[test]
+    fn test_line_match_deserialization() {
+        let json = r#"{
+            "Line": "aW1wb3J0IG9z",
+            "LineNumber": 1,
+            "Before": null,
+            "After": null
+        }"#;
+        let lm: LineMatch = serde_json::from_str(json).unwrap();
+        assert_eq!(lm.line, "aW1wb3J0IG9z");
+        assert_eq!(lm.line_number, 1);
+        assert!(lm.before.is_none());
+        assert!(lm.after.is_none());
+        assert!(!lm.file_name_match);
+    }
+}
