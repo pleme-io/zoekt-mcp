@@ -387,3 +387,415 @@ impl DaemonConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_defaults_are_sensible() {
+        let config = DaemonConfig::default();
+        assert_eq!(config.port, 6070);
+        assert_eq!(config.index_dir, "~/.zoekt/index");
+        assert_eq!(config.index_interval, 300);
+        assert!(config.delta);
+        assert_eq!(config.branches, "HEAD");
+        assert_eq!(config.parallelism, 4);
+        assert_eq!(config.file_limit, 2_097_152);
+        assert!(config.large_files.is_empty());
+        assert!(config.repos.is_empty());
+        assert!(config.github.is_none());
+        assert!(config.zoekt_bin.is_none());
+        assert!(config.git_bin.is_none());
+        assert!(config.ctags_bin.is_none());
+    }
+
+    #[test]
+    fn test_ctags_config_default() {
+        let ctags = CtagsConfig::default();
+        assert!(ctags.enable);
+        assert!(ctags.require);
+    }
+
+    #[test]
+    fn test_webserver_config_default() {
+        let ws = WebserverConfig::default();
+        assert!(ws.rpc);
+        assert!(ws.html);
+        assert!(!ws.pprof);
+        assert!(ws.log_dir.is_none());
+        assert_eq!(ws.log_refresh, "24h");
+    }
+
+    #[test]
+    fn test_load_minimal_yaml() {
+        let yaml = "port: 9090\n";
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(yaml.as_bytes()).unwrap();
+        let config = DaemonConfig::load(tmp.path()).unwrap();
+        assert_eq!(config.port, 9090);
+        assert_eq!(config.index_dir, "~/.zoekt/index");
+        assert_eq!(config.index_interval, 300);
+    }
+
+    #[test]
+    fn test_load_full_yaml() {
+        let yaml = r#"
+port: 8080
+index_dir: /tmp/zoekt-test
+index_interval: 60
+zoekt_bin: /opt/zoekt/bin
+git_bin: /usr/local/bin
+ctags_bin: /usr/bin
+delta: false
+branches: "HEAD,main"
+parallelism: 8
+file_limit: 1048576
+large_files:
+  - "*.pb.go"
+  - "*.min.js"
+ctags:
+  enable: false
+  require: false
+webserver:
+  rpc: false
+  html: false
+  pprof: true
+  log_dir: /var/log/zoekt
+  log_refresh: "12h"
+repos:
+  - /home/user/project1
+  - /home/user/project2
+"#;
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(yaml.as_bytes()).unwrap();
+        let config = DaemonConfig::load(tmp.path()).unwrap();
+        assert_eq!(config.port, 8080);
+        assert_eq!(config.index_dir, "/tmp/zoekt-test");
+        assert_eq!(config.index_interval, 60);
+        assert_eq!(config.zoekt_bin.as_deref(), Some("/opt/zoekt/bin"));
+        assert_eq!(config.git_bin.as_deref(), Some("/usr/local/bin"));
+        assert_eq!(config.ctags_bin.as_deref(), Some("/usr/bin"));
+        assert!(!config.delta);
+        assert_eq!(config.branches, "HEAD,main");
+        assert_eq!(config.parallelism, 8);
+        assert_eq!(config.file_limit, 1_048_576);
+        assert_eq!(config.large_files, vec!["*.pb.go", "*.min.js"]);
+        assert!(!config.ctags.enable);
+        assert!(!config.ctags.require);
+        assert!(!config.webserver.rpc);
+        assert!(!config.webserver.html);
+        assert!(config.webserver.pprof);
+        assert_eq!(config.webserver.log_dir.as_deref(), Some("/var/log/zoekt"));
+        assert_eq!(config.webserver.log_refresh, "12h");
+        assert_eq!(config.repos.len(), 2);
+    }
+
+    #[test]
+    fn test_load_invalid_yaml_returns_error() {
+        let yaml = "{{{{not valid yaml";
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(yaml.as_bytes()).unwrap();
+        let result = DaemonConfig::load(tmp.path());
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Failed to parse config"), "got: {err}");
+    }
+
+    #[test]
+    fn test_load_nonexistent_file_returns_error() {
+        let result = DaemonConfig::load(Path::new("/nonexistent/config.yaml"));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Failed to read config file"), "got: {err}");
+    }
+
+    #[test]
+    fn test_load_empty_yaml_uses_defaults() {
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(b"{}").unwrap();
+        let config = DaemonConfig::load(tmp.path()).unwrap();
+        assert_eq!(config.port, 6070);
+        assert_eq!(config.index_interval, 300);
+    }
+
+    #[test]
+    fn test_expand_paths_tilde() {
+        let mut config = DaemonConfig {
+            index_dir: "~/zoekt-test".to_string(),
+            zoekt_bin: Some("~/bin/zoekt".to_string()),
+            git_bin: Some("~/bin/git".to_string()),
+            ctags_bin: Some("~/bin/ctags".to_string()),
+            webserver: WebserverConfig {
+                log_dir: Some("~/logs".to_string()),
+                ..Default::default()
+            },
+            repos: vec!["~/code/repo1".to_string(), "~/code/repo2".to_string()],
+            ..Default::default()
+        };
+        config.expand_paths();
+
+        assert!(!config.index_dir.starts_with('~'), "index_dir not expanded: {}", config.index_dir);
+        assert!(!config.zoekt_bin.as_ref().unwrap().starts_with('~'));
+        assert!(!config.git_bin.as_ref().unwrap().starts_with('~'));
+        assert!(!config.ctags_bin.as_ref().unwrap().starts_with('~'));
+        assert!(!config.webserver.log_dir.as_ref().unwrap().starts_with('~'));
+        for repo in &config.repos {
+            assert!(!repo.starts_with('~'), "repo not expanded: {repo}");
+        }
+    }
+
+    #[test]
+    fn test_expand_paths_no_tilde_is_noop() {
+        let mut config = DaemonConfig {
+            index_dir: "/absolute/path".to_string(),
+            zoekt_bin: None,
+            git_bin: None,
+            ctags_bin: None,
+            webserver: WebserverConfig {
+                log_dir: None,
+                ..Default::default()
+            },
+            repos: vec!["/abs/repo".to_string()],
+            ..Default::default()
+        };
+        let original_index = config.index_dir.clone();
+        config.expand_paths();
+        assert_eq!(config.index_dir, original_index);
+        assert_eq!(config.repos[0], "/abs/repo");
+    }
+
+    #[test]
+    fn test_build_path_with_all_bins() {
+        let config = DaemonConfig {
+            ctags_bin: Some("/opt/ctags/bin".to_string()),
+            zoekt_bin: Some("/opt/zoekt/bin".to_string()),
+            git_bin: Some("/opt/git/bin".to_string()),
+            ..Default::default()
+        };
+        let path = config.build_path();
+        assert!(path.starts_with("/opt/ctags/bin:/opt/zoekt/bin:/opt/git/bin"));
+    }
+
+    #[test]
+    fn test_build_path_no_custom_bins() {
+        let config = DaemonConfig::default();
+        let path = config.build_path();
+        // Should still include system PATH
+        assert!(!path.is_empty());
+    }
+
+    #[test]
+    fn test_webserver_args_default() {
+        let config = DaemonConfig::default();
+        let args = config.webserver_args();
+        assert!(args.contains(&"-index".to_string()));
+        assert!(args.contains(&config.index_dir));
+        assert!(args.contains(&"-listen".to_string()));
+        assert!(args.contains(&":6070".to_string()));
+        assert!(args.contains(&"-rpc".to_string()));
+        assert!(args.contains(&"-log_refresh".to_string()));
+        assert!(args.contains(&"24h".to_string()));
+        assert!(!args.contains(&"-pprof".to_string()));
+        assert!(!args.contains(&"-html=false".to_string()));
+    }
+
+    #[test]
+    fn test_webserver_args_custom() {
+        let config = DaemonConfig {
+            port: 9090,
+            index_dir: "/tmp/idx".to_string(),
+            webserver: WebserverConfig {
+                rpc: false,
+                html: false,
+                pprof: true,
+                log_dir: Some("/var/log".to_string()),
+                log_refresh: "1h".to_string(),
+            },
+            ..Default::default()
+        };
+        let args = config.webserver_args();
+        assert!(args.contains(&":9090".to_string()));
+        assert!(args.contains(&"/tmp/idx".to_string()));
+        assert!(args.contains(&"-pprof".to_string()));
+        assert!(args.contains(&"-html=false".to_string()));
+        assert!(args.contains(&"-log_dir".to_string()));
+        assert!(args.contains(&"/var/log".to_string()));
+        assert!(!args.contains(&"-rpc".to_string()));
+    }
+
+    #[test]
+    fn test_indexer_args_default() {
+        let config = DaemonConfig::default();
+        let args = config.indexer_args();
+        assert!(args.contains(&"-index".to_string()));
+        assert!(args.contains(&"-require_ctags".to_string()));
+        assert!(args.contains(&"-delta".to_string()));
+        assert!(args.contains(&"-parallelism".to_string()));
+        assert!(args.contains(&"4".to_string()));
+        assert!(args.contains(&"-file_limit".to_string()));
+        assert!(args.contains(&"2097152".to_string()));
+        assert!(!args.contains(&"-branches".to_string()));
+    }
+
+    #[test]
+    fn test_indexer_args_ctags_disabled() {
+        let config = DaemonConfig {
+            ctags: CtagsConfig {
+                enable: false,
+                require: false,
+            },
+            ..Default::default()
+        };
+        let args = config.indexer_args();
+        assert!(args.contains(&"-disable_ctags".to_string()));
+        assert!(!args.contains(&"-require_ctags".to_string()));
+    }
+
+    #[test]
+    fn test_indexer_args_ctags_enabled_no_require() {
+        let config = DaemonConfig {
+            ctags: CtagsConfig {
+                enable: true,
+                require: false,
+            },
+            ..Default::default()
+        };
+        let args = config.indexer_args();
+        assert!(!args.contains(&"-require_ctags".to_string()));
+        assert!(!args.contains(&"-disable_ctags".to_string()));
+    }
+
+    #[test]
+    fn test_indexer_args_custom_branches() {
+        let config = DaemonConfig {
+            branches: "HEAD,main,develop".to_string(),
+            ..Default::default()
+        };
+        let args = config.indexer_args();
+        assert!(args.contains(&"-branches".to_string()));
+        assert!(args.contains(&"HEAD,main,develop".to_string()));
+    }
+
+    #[test]
+    fn test_indexer_args_large_files() {
+        let config = DaemonConfig {
+            large_files: vec!["*.pb.go".to_string(), "*.min.js".to_string()],
+            ..Default::default()
+        };
+        let args = config.indexer_args();
+        let lf_positions: Vec<_> = args.iter().enumerate()
+            .filter(|(_, a)| *a == "-large_file")
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(lf_positions.len(), 2);
+        assert_eq!(args[lf_positions[0] + 1], "*.pb.go");
+        assert_eq!(args[lf_positions[1] + 1], "*.min.js");
+    }
+
+    #[test]
+    fn test_indexer_args_no_delta() {
+        let config = DaemonConfig {
+            delta: false,
+            ..Default::default()
+        };
+        let args = config.indexer_args();
+        assert!(!args.contains(&"-delta".to_string()));
+    }
+
+    #[test]
+    fn test_indexer_bin_with_zoekt_bin() {
+        let config = DaemonConfig {
+            zoekt_bin: Some("/opt/zoekt/bin".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(config.indexer_bin(), PathBuf::from("/opt/zoekt/bin/zoekt-git-index"));
+    }
+
+    #[test]
+    fn test_indexer_bin_without_zoekt_bin() {
+        let config = DaemonConfig::default();
+        assert_eq!(config.indexer_bin(), PathBuf::from("zoekt-git-index"));
+    }
+
+    #[test]
+    fn test_webserver_bin_with_zoekt_bin() {
+        let config = DaemonConfig {
+            zoekt_bin: Some("/opt/zoekt/bin".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(config.webserver_bin(), PathBuf::from("/opt/zoekt/bin/zoekt-webserver"));
+    }
+
+    #[test]
+    fn test_webserver_bin_without_zoekt_bin() {
+        let config = DaemonConfig::default();
+        assert_eq!(config.webserver_bin(), PathBuf::from("zoekt-webserver"));
+    }
+
+    #[test]
+    fn test_github_config_deserialization() {
+        let yaml = r#"
+port: 6070
+github:
+  token_file: "~/.config/gh/token"
+  sources:
+    - owner: myorg
+      kind: org
+      clone_base: ~/code/org
+      auto_clone: true
+      skip_archived: true
+      skip_forks: true
+      exclude:
+        - "*.wiki"
+        - "legacy-*"
+    - owner: myuser
+      kind: user
+      clone_base: ~/code/personal
+      auto_clone: false
+"#;
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(yaml.as_bytes()).unwrap();
+        let config = DaemonConfig::load(tmp.path()).unwrap();
+        let gh = config.github.unwrap();
+        assert_eq!(gh.token_file.as_deref(), Some("~/.config/gh/token"));
+        assert_eq!(gh.sources.len(), 2);
+
+        let src0 = &gh.sources[0];
+        assert_eq!(src0.owner, "myorg");
+        assert!(matches!(src0.kind, OwnerKind::Org));
+        assert!(src0.auto_clone);
+        assert!(src0.skip_archived);
+        assert!(src0.skip_forks);
+        assert_eq!(src0.exclude.len(), 2);
+
+        let src1 = &gh.sources[1];
+        assert_eq!(src1.owner, "myuser");
+        assert!(matches!(src1.kind, OwnerKind::User));
+        assert!(!src1.auto_clone);
+    }
+
+    #[test]
+    fn test_owner_kind_default_is_org() {
+        let kind = OwnerKind::default();
+        assert!(matches!(kind, OwnerKind::Org));
+    }
+
+    #[test]
+    fn test_config_roundtrip_serde() {
+        let config = DaemonConfig {
+            port: 7777,
+            index_dir: "/custom/idx".to_string(),
+            index_interval: 120,
+            repos: vec!["/repo/a".to_string()],
+            ..Default::default()
+        };
+        let yaml = serde_yaml::to_string(&config).unwrap();
+        let parsed: DaemonConfig = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed.port, 7777);
+        assert_eq!(parsed.index_dir, "/custom/idx");
+        assert_eq!(parsed.index_interval, 120);
+        assert_eq!(parsed.repos, vec!["/repo/a"]);
+    }
+}
