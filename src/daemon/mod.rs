@@ -177,3 +177,53 @@ pub fn validate_binaries(config: &DaemonConfig) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_binaries_no_zoekt_bin_always_ok() {
+        let config = config::DaemonConfig::default();
+        assert!(config.zoekt_bin.is_none());
+        assert!(validate_binaries(&config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_binaries_nonexistent_path_errors() {
+        let config = config::DaemonConfig {
+            zoekt_bin: Some("/nonexistent/path/that/does/not/exist".to_string()),
+            ..Default::default()
+        };
+        let result = validate_binaries(&config);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("zoekt-webserver not found") || err.contains("zoekt-git-index not found"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn test_validate_binaries_existing_dir_without_binaries() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = config::DaemonConfig {
+            zoekt_bin: Some(dir.path().to_string_lossy().to_string()),
+            ..Default::default()
+        };
+        let result = validate_binaries(&config);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_binaries_with_real_binaries() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("zoekt-webserver"), "").unwrap();
+        std::fs::write(dir.path().join("zoekt-git-index"), "").unwrap();
+        let config = config::DaemonConfig {
+            zoekt_bin: Some(dir.path().to_string_lossy().to_string()),
+            ..Default::default()
+        };
+        assert!(validate_binaries(&config).is_ok());
+    }
+}
