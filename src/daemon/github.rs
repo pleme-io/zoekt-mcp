@@ -305,6 +305,8 @@ pub async fn resolve_all_repos(
 mod tests {
     use super::*;
 
+    // ── matches_pattern ─────────────────────────────────────────────────
+
     #[test]
     fn test_matches_pattern_exact() {
         assert!(matches_pattern("foo", "foo"));
@@ -339,10 +341,193 @@ mod tests {
     }
 
     #[test]
+    fn test_matches_pattern_empty_pattern_only_matches_empty() {
+        assert!(matches_pattern("", ""));
+        assert!(!matches_pattern("notempty", ""));
+    }
+
+    #[test]
+    fn test_matches_pattern_multiple_wildcards() {
+        assert!(matches_pattern("a-b-c-d", "a-*-*-d"));
+        assert!(matches_pattern("a--d", "a-*-d"));
+        assert!(matches_pattern("start-mid1-mid2-end", "start-*-*-end"));
+        assert!(!matches_pattern("a-b-c-e", "a-*-*-d"));
+    }
+
+    #[test]
+    fn test_matches_pattern_consecutive_wildcards() {
+        assert!(matches_pattern("abc", "**"));
+        assert!(matches_pattern("", "**"));
+        assert!(matches_pattern("anything-at-all", "***"));
+    }
+
+    #[test]
+    fn test_matches_pattern_wildcard_at_both_ends() {
+        assert!(matches_pattern("xfoox", "*foo*"));
+        assert!(matches_pattern("foo", "*foo*"));
+        assert!(matches_pattern("foobar", "*foo*"));
+        assert!(matches_pattern("barfoo", "*foo*"));
+        assert!(!matches_pattern("bar", "*foo*"));
+    }
+
+    #[test]
+    fn test_matches_pattern_no_partial_match_without_wildcard() {
+        assert!(!matches_pattern("foobar", "foo"));
+        assert!(!matches_pattern("barfoo", "foo"));
+    }
+
+    // ── is_excluded ─────────────────────────────────────────────────────
+
+    #[test]
     fn test_is_excluded() {
         let patterns = vec!["*.wiki".to_string(), "legacy-*".to_string()];
         assert!(is_excluded("repo.wiki", &patterns));
         assert!(is_excluded("legacy-api", &patterns));
         assert!(!is_excluded("codesearch", &patterns));
+    }
+
+    #[test]
+    fn test_is_excluded_empty_patterns() {
+        assert!(!is_excluded("anything", &[]));
+    }
+
+    #[test]
+    fn test_is_excluded_exact_match() {
+        let patterns = vec!["secret-repo".to_string()];
+        assert!(is_excluded("secret-repo", &patterns));
+        assert!(!is_excluded("secret-repo2", &patterns));
+    }
+
+    // ── filter_repos ────────────────────────────────────────────────────
+
+    fn make_repo(name: &str, archived: bool, fork: bool) -> GitHubRepo {
+        GitHubRepo {
+            name: name.to_string(),
+            clone_url: format!("https://github.com/test/{name}.git"),
+            archived,
+            fork,
+        }
+    }
+
+    fn make_source(skip_archived: bool, skip_forks: bool, exclude: Vec<String>) -> GitHubSource {
+        GitHubSource {
+            owner: "testowner".to_string(),
+            kind: OwnerKind::Org,
+            clone_base: "/tmp/test".to_string(),
+            auto_clone: false,
+            skip_archived,
+            skip_forks,
+            exclude,
+        }
+    }
+
+    #[test]
+    fn test_filter_repos_skip_archived() {
+        let repos = vec![
+            make_repo("active", false, false),
+            make_repo("old-stuff", true, false),
+        ];
+        let source = make_source(true, false, vec![]);
+        let filtered = filter_repos(repos, &source);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].name, "active");
+    }
+
+    #[test]
+    fn test_filter_repos_keep_archived_when_not_skipping() {
+        let repos = vec![
+            make_repo("active", false, false),
+            make_repo("old-stuff", true, false),
+        ];
+        let source = make_source(false, false, vec![]);
+        let filtered = filter_repos(repos, &source);
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_repos_skip_forks() {
+        let repos = vec![
+            make_repo("original", false, false),
+            make_repo("forked", false, true),
+        ];
+        let source = make_source(false, true, vec![]);
+        let filtered = filter_repos(repos, &source);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].name, "original");
+    }
+
+    #[test]
+    fn test_filter_repos_exclude_patterns() {
+        let repos = vec![
+            make_repo("myapp", false, false),
+            make_repo("myapp.wiki", false, false),
+            make_repo("legacy-api", false, false),
+            make_repo("new-service", false, false),
+        ];
+        let source = make_source(false, false, vec!["*.wiki".to_string(), "legacy-*".to_string()]);
+        let filtered = filter_repos(repos, &source);
+        assert_eq!(filtered.len(), 2);
+        let names: Vec<_> = filtered.iter().map(|r| r.name.as_str()).collect();
+        assert!(names.contains(&"myapp"));
+        assert!(names.contains(&"new-service"));
+    }
+
+    #[test]
+    fn test_filter_repos_combined_filters() {
+        let repos = vec![
+            make_repo("good", false, false),
+            make_repo("archived-good", true, false),
+            make_repo("forked-good", false, true),
+            make_repo("excluded.wiki", false, false),
+            make_repo("archived-fork", true, true),
+        ];
+        let source = make_source(true, true, vec!["*.wiki".to_string()]);
+        let filtered = filter_repos(repos, &source);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].name, "good");
+    }
+
+    #[test]
+    fn test_filter_repos_empty_input() {
+        let source = make_source(true, true, vec!["*.wiki".to_string()]);
+        let filtered = filter_repos(vec![], &source);
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_filter_repos_no_filters_keeps_all() {
+        let repos = vec![
+            make_repo("a", true, true),
+            make_repo("b", false, false),
+        ];
+        let source = make_source(false, false, vec![]);
+        let filtered = filter_repos(repos, &source);
+        assert_eq!(filtered.len(), 2);
+    }
+
+    // ── resolve_all_repos (no GitHub, explicit-only paths) ──────────────
+
+    #[tokio::test]
+    async fn test_resolve_all_repos_no_github_config() {
+        let explicit = vec!["/tmp/repo1".to_string(), "/tmp/repo2".to_string()];
+        let result = resolve_all_repos(explicit.clone(), None, &None).await;
+        assert_eq!(result, explicit);
+    }
+
+    #[tokio::test]
+    async fn test_resolve_all_repos_empty_sources() {
+        let explicit = vec!["/tmp/repo1".to_string()];
+        let gh = GitHubConfig {
+            token_file: None,
+            sources: vec![],
+        };
+        let result = resolve_all_repos(explicit.clone(), Some(&gh), &None).await;
+        assert_eq!(result, explicit);
+    }
+
+    #[tokio::test]
+    async fn test_resolve_all_repos_empty_explicit() {
+        let result = resolve_all_repos(vec![], None, &None).await;
+        assert!(result.is_empty());
     }
 }
