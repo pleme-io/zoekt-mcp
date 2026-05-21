@@ -18,6 +18,8 @@ enum Cli {
     },
     /// Run as MCP server (default)
     Mcp,
+    /// Show the materialized config at a tier (bare/default/discovered/custom/env).
+    ConfigShow(shikumi::cli::ConfigShowCommand),
 }
 
 impl Default for Cli {
@@ -68,6 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             tracing::info!("zoekt-mcp starting");
             mcp::run().await?;
+        }
+        Cli::ConfigShow(cmd) => {
+            cmd.run::<crate::daemon::config::DaemonConfig>("ZOEKT_MCP_TIER")
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
         }
     }
 
