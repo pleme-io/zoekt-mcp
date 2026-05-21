@@ -225,6 +225,67 @@ impl Default for DaemonConfig {
     }
 }
 
+impl shikumi::TieredConfig for DaemonConfig {
+    /// Tier 0 — bare: zero-opinion floor. Every field empty / zero /
+    /// false. Documents the minimum that won't crash; operators
+    /// reading this know exactly what "no opinion" means.
+    fn bare() -> Self {
+        Self {
+            port: 0,
+            index_dir: String::new(),
+            index_interval: 0,
+            zoekt_bin: None,
+            git_bin: None,
+            ctags_bin: None,
+            delta: false,
+            branches: String::new(),
+            parallelism: 0,
+            file_limit: 0,
+            large_files: Vec::new(),
+            ctags: CtagsConfig { enable: false, require: false },
+            webserver: WebserverConfig {
+                rpc: false,
+                html: false,
+                pprof: false,
+                log_dir: None,
+                log_refresh: String::new(),
+            },
+            repos: Vec::new(),
+            github: None,
+        }
+    }
+
+    /// Tier 2 — prescribed: the curated zoekt-mcp defaults shipped
+    /// today. Delegates to Default so there's one source.
+    fn prescribed_default() -> Self {
+        Self::default()
+    }
+}
+
+impl shikumi::TieredConfig for CtagsConfig {
+    fn bare() -> Self {
+        Self { enable: false, require: false }
+    }
+    fn prescribed_default() -> Self {
+        Self::default()
+    }
+}
+
+impl shikumi::TieredConfig for WebserverConfig {
+    fn bare() -> Self {
+        Self {
+            rpc: false,
+            html: false,
+            pprof: false,
+            log_dir: None,
+            log_refresh: String::new(),
+        }
+    }
+    fn prescribed_default() -> Self {
+        Self::default()
+    }
+}
+
 impl DaemonConfig {
     /// Load config from a YAML file path.
     pub fn load(path: &Path) -> anyhow::Result<Self> {
@@ -797,5 +858,81 @@ github:
         assert_eq!(parsed.index_dir, "/custom/idx");
         assert_eq!(parsed.index_interval, 120);
         assert_eq!(parsed.repos, vec!["/repo/a"]);
+    }
+}
+
+#[cfg(test)]
+mod tiered_tests {
+    use super::*;
+    use shikumi::{ConfigTier, TieredConfig};
+
+    #[test]
+    fn daemon_config_bare_is_zero_opinion() {
+        let b = <DaemonConfig as TieredConfig>::bare();
+        assert_eq!(b.port, 0);
+        assert_eq!(b.index_dir, "");
+        assert_eq!(b.index_interval, 0);
+        assert!(!b.delta);
+        assert_eq!(b.branches, "");
+        assert_eq!(b.parallelism, 0);
+        assert_eq!(b.file_limit, 0);
+        assert!(b.repos.is_empty());
+        assert!(!b.ctags.enable);
+        assert!(!b.webserver.rpc);
+    }
+
+    #[test]
+    fn daemon_config_prescribed_matches_default() {
+        let p = <DaemonConfig as TieredConfig>::prescribed_default();
+        let d = DaemonConfig::default();
+        assert_eq!(p.port, d.port);
+        assert_eq!(p.index_dir, d.index_dir);
+        assert_eq!(p.index_interval, d.index_interval);
+    }
+
+    #[test]
+    fn daemon_config_diff_bare_vs_default_is_non_empty() {
+        let b = <DaemonConfig as TieredConfig>::bare();
+        let d = <DaemonConfig as TieredConfig>::prescribed_default();
+        let diff = d.diff_against(&b);
+        assert!(
+            !diff.is_empty_diff(),
+            "bare and prescribed_default must differ"
+        );
+    }
+
+    #[test]
+    fn daemon_config_resolve_tier_dispatches_correctly() {
+        assert_eq!(
+            <DaemonConfig as TieredConfig>::resolve_tier(ConfigTier::Bare).port,
+            0
+        );
+        assert_eq!(
+            <DaemonConfig as TieredConfig>::resolve_tier(ConfigTier::Default).port,
+            6070
+        );
+    }
+
+    #[test]
+    fn ctags_and_webserver_bare_are_zero_opinion() {
+        let c = <CtagsConfig as TieredConfig>::bare();
+        assert!(!c.enable && !c.require);
+
+        let w = <WebserverConfig as TieredConfig>::bare();
+        assert!(!w.rpc && !w.html && !w.pprof);
+        assert!(w.log_dir.is_none());
+        assert_eq!(w.log_refresh, "");
+    }
+
+    #[test]
+    fn ctags_and_webserver_prescribed_match_default() {
+        assert_eq!(
+            <CtagsConfig as TieredConfig>::prescribed_default().enable,
+            true
+        );
+        assert_eq!(
+            <WebserverConfig as TieredConfig>::prescribed_default().log_refresh,
+            "24h"
+        );
     }
 }
