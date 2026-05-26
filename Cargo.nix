@@ -5309,7 +5309,7 @@ rec {
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/shikumi";
           rev = "5db7873c9a109f619474228cbea15d64b4825b8a";
-          sha256 = "sha256-LJrkEo5yMS2OqfM7vsZje+uBfB6z4rfO6ZGzFzQTNdo=";
+          sha256 = "124f7vs2ajglr4d6dch1gh2414byfaydz2h9p689475yqr7rm9da";
         };
         dependencies = [
           {
@@ -9744,7 +9744,7 @@ rec {
       };
       "zoekt-mcp" = rec {
         crateName = "zoekt-mcp";
-        version = "0.1.0";
+        version = "0.1.1";
         edition = "2021";
         crateBin = [
           {
