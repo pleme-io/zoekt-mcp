@@ -645,7 +645,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(unix)"
         },
         {
           "name": "num_traits",
@@ -674,7 +674,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(unix)"
         },
         {
           "name": "num_traits",
@@ -1636,7 +1636,7 @@
           "features": [],
           "uses_default_features": false,
           "optional": false,
-          "target": "cfg(target_os = \"hermit\")"
+          "target": "cfg(unix)"
         }
       ],
       "runtime_dependencies": [
@@ -1647,7 +1647,7 @@
           "features": [],
           "uses_default_features": false,
           "optional": false,
-          "target": "cfg(target_os = \"hermit\")"
+          "target": "cfg(unix)"
         }
       ],
       "build_dependencies": [],
@@ -4005,7 +4005,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(target_vendor = \"apple\")"
         }
       ],
       "runtime_dependencies": [
@@ -4016,7 +4016,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(target_vendor = \"apple\")"
         }
       ],
       "build_dependencies": [],
@@ -5346,7 +5346,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(target_os = \"macos\")"
         },
         {
           "name": "libc",
@@ -5402,7 +5402,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(target_os = \"macos\")"
         },
         {
           "name": "libc",
@@ -7361,7 +7361,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "http_body_util",
@@ -7370,7 +7370,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "hyper",
@@ -7391,7 +7391,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "hyper_util",
@@ -7400,7 +7400,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "log",
@@ -7418,7 +7418,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "pin_project_lite",
@@ -7427,7 +7427,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "quinn",
@@ -7460,7 +7460,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "serde",
@@ -7519,7 +7519,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "tower",
@@ -7541,7 +7541,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "tower_service",
@@ -7550,7 +7550,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "url",
@@ -7568,7 +7568,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         }
       ],
       "runtime_dependencies": [
@@ -7615,7 +7615,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "http_body_util",
@@ -7624,7 +7624,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "hyper",
@@ -7645,7 +7645,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "hyper_util",
@@ -7654,7 +7654,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "log",
@@ -7672,7 +7672,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "pin_project_lite",
@@ -7681,7 +7681,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "quinn",
@@ -7714,7 +7714,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "serde",
@@ -7773,7 +7773,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "tower",
@@ -7795,7 +7795,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "tower_service",
@@ -7804,7 +7804,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         },
         {
           "name": "url",
@@ -7822,7 +7822,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(not(target_arch = \"wasm32\"))"
         }
       ],
       "build_dependencies": [],
@@ -8073,7 +8073,7 @@
           ],
           "uses_default_features": false,
           "optional": false,
-          "target": "cfg(all(target_family = \"wasm\", target_os = \"unknown\"))"
+          "target": "cfg(not(all(target_family = \"wasm\", target_os = \"unknown\")))"
         },
         {
           "name": "futures",
@@ -8216,7 +8216,7 @@
           ],
           "uses_default_features": false,
           "optional": false,
-          "target": "cfg(all(target_family = \"wasm\", target_os = \"unknown\"))"
+          "target": "cfg(not(all(target_family = \"wasm\", target_os = \"unknown\")))"
         },
         {
           "name": "futures",
@@ -11315,7 +11315,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(unix)"
         },
         {
           "name": "socket2",
@@ -11391,7 +11391,7 @@
           "features": [],
           "uses_default_features": true,
           "optional": false,
-          "target": null
+          "target": "cfg(unix)"
         },
         {
           "name": "socket2",
@@ -14409,15 +14409,6 @@
           "target": null
         },
         {
-          "name": "tempfile",
-          "package_key": "tempfile-3.27.0",
-          "kind": "normal",
-          "features": [],
-          "uses_default_features": true,
-          "optional": false,
-          "target": null
-        },
-        {
           "name": "tokio",
           "package_key": "tokio-1.52.3",
           "kind": "normal",
@@ -14564,15 +14555,6 @@
           "features": [
             "cli"
           ],
-          "uses_default_features": true,
-          "optional": false,
-          "target": null
-        },
-        {
-          "name": "tempfile",
-          "package_key": "tempfile-3.27.0",
-          "kind": "normal",
-          "features": [],
           "uses_default_features": true,
           "optional": false,
           "target": null
