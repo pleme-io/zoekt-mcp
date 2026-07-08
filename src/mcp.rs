@@ -6,8 +6,11 @@
 //!
 //! Environment:
 //!   ZOEKT_URL  — Zoekt webserver base URL (default: http://localhost:6070)
+//!
+//! The HTTP client + typed API request/response shapes live in this crate's
+//! library surface, `zoekt_mcp::client` — this module is the MCP tool-router
+//! + human-readable formatting layer over it.
 
-use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use rmcp::{
     ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -15,8 +18,11 @@ use rmcp::{
     schemars, tool, tool_handler, tool_router,
     transport::stdio,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::fmt::Write;
+use zoekt_mcp::client::{
+    decode_b64, ListRequest, ListResponse, SearchOpts, SearchRequest, SearchResult, ZoektClient,
+};
 
 // ── Tool input types ────────────────────────────────────────────────────────
 
@@ -45,262 +51,21 @@ struct ListReposInput {
     query: Option<String>,
 }
 
-// ── Zoekt Search API ────────────────────────────────────────────────────────
-
-#[derive(Serialize)]
-struct SearchRequest {
-    #[serde(rename = "Q")]
-    q: String,
-    #[serde(rename = "Opts")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    opts: Option<SearchOpts>,
-}
-
-#[derive(Serialize)]
-struct SearchOpts {
-    #[serde(rename = "MaxDocDisplayCount")]
-    max_doc_display_count: u32,
-    #[serde(rename = "NumContextLines")]
-    num_context_lines: u32,
-    #[serde(rename = "ChunkMatches")]
-    chunk_matches: bool,
-    #[serde(rename = "Whole")]
-    whole: bool,
-}
-
-#[derive(Deserialize)]
-struct SearchResponse {
-    #[serde(rename = "Result")]
-    result: SearchResult,
-}
-
-#[derive(Deserialize)]
-struct SearchResult {
-    #[serde(rename = "MatchCount")]
-    match_count: u64,
-    #[serde(rename = "FileCount")]
-    file_count: u64,
-    #[serde(rename = "Duration")]
-    #[serde(default)]
-    duration: u64,
-    #[serde(rename = "Files")]
-    files: Option<Vec<FileMatch>>,
-}
-
-#[derive(Deserialize)]
-struct FileMatch {
-    #[serde(rename = "FileName")]
-    file_name: String,
-    #[serde(rename = "Repository")]
-    #[serde(default)]
-    repository: String,
-    #[serde(rename = "Language")]
-    #[serde(default)]
-    language: String,
-    #[serde(rename = "Branches")]
-    #[serde(default)]
-    branches: Vec<String>,
-    #[serde(rename = "Version")]
-    #[serde(default)]
-    version: String,
-    #[serde(rename = "ChunkMatches")]
-    chunk_matches: Option<Vec<ChunkMatch>>,
-    #[serde(rename = "LineMatches")]
-    line_matches: Option<Vec<LineMatch>>,
-    #[serde(rename = "Content")]
-    #[serde(default)]
-    content: String,
-    #[serde(rename = "Score")]
-    #[serde(default)]
-    score: f64,
-}
-
-#[derive(Deserialize)]
-struct ChunkMatch {
-    #[serde(rename = "Content")]
-    content: String,
-    #[serde(rename = "ContentStart")]
-    content_start: Location,
-    #[serde(rename = "Ranges")]
-    #[serde(default)]
-    ranges: Vec<Range>,
-    #[serde(rename = "SymbolInfo")]
-    symbol_info: Option<Vec<Option<SymbolInfo>>>,
-    #[serde(rename = "Score")]
-    #[serde(default)]
-    score: f64,
-}
-
-#[derive(Deserialize)]
-struct Location {
-    #[serde(rename = "ByteOffset")]
-    #[serde(default)]
-    byte_offset: u32,
-    #[serde(rename = "LineNumber")]
-    line_number: u32,
-    #[serde(rename = "Column")]
-    #[serde(default)]
-    column: u32,
-}
-
-#[derive(Deserialize)]
-struct Range {
-    #[serde(rename = "Start")]
-    start: Location,
-    #[serde(rename = "End")]
-    end: Location,
-}
-
-#[derive(Deserialize)]
-struct SymbolInfo {
-    #[serde(rename = "Sym")]
-    sym: String,
-    #[serde(rename = "Kind")]
-    #[serde(default)]
-    kind: String,
-    #[serde(rename = "Parent")]
-    #[serde(default)]
-    parent: String,
-    #[serde(rename = "ParentKind")]
-    #[serde(default)]
-    parent_kind: String,
-}
-
-#[derive(Deserialize)]
-struct LineMatch {
-    #[serde(rename = "Line")]
-    line: String,
-    #[serde(rename = "LineNumber")]
-    line_number: u32,
-    #[serde(rename = "Before")]
-    before: Option<String>,
-    #[serde(rename = "After")]
-    after: Option<String>,
-    #[serde(rename = "FileName")]
-    #[serde(default)]
-    file_name_match: bool,
-}
-
-// ── Zoekt List API ──────────────────────────────────────────────────────────
-
-#[derive(Serialize)]
-struct ListRequest {
-    #[serde(rename = "Q")]
-    q: String,
-}
-
-#[derive(Deserialize)]
-struct ListResponse {
-    #[serde(rename = "List")]
-    list: RepoList,
-}
-
-#[derive(Deserialize)]
-struct RepoList {
-    #[serde(rename = "Repos")]
-    repos: Option<Vec<RepoEntry>>,
-}
-
-#[derive(Deserialize)]
-struct RepoEntry {
-    #[serde(rename = "Repository")]
-    repository: RepoInfo,
-    #[serde(rename = "Stats")]
-    stats: RepoStats,
-}
-
-#[derive(Deserialize)]
-struct RepoInfo {
-    #[serde(rename = "Name")]
-    name: String,
-    #[serde(rename = "URL")]
-    #[serde(default)]
-    url: String,
-    #[serde(rename = "Branches")]
-    #[serde(default)]
-    branches: Vec<BranchInfo>,
-    #[serde(rename = "HasSymbols")]
-    #[serde(default)]
-    has_symbols: bool,
-}
-
-#[derive(Deserialize)]
-struct BranchInfo {
-    #[serde(rename = "Name")]
-    name: String,
-    #[serde(rename = "Version")]
-    #[serde(default)]
-    version: String,
-}
-
-#[derive(Deserialize)]
-struct RepoStats {
-    #[serde(rename = "Documents")]
-    documents: u64,
-    #[serde(rename = "ContentBytes")]
-    content_bytes: u64,
-    #[serde(rename = "IndexBytes")]
-    #[serde(default)]
-    index_bytes: u64,
-}
-
-// ── Base64 helpers ──────────────────────────────────────────────────────────
-
-/// Decode a base64-encoded field, falling back to the raw string if it's plain text.
-fn decode_b64(s: &str) -> String {
-    if s.is_empty() {
-        return String::new();
-    }
-    B64.decode(s)
-        .ok()
-        .and_then(|bytes| String::from_utf8(bytes).ok())
-        .unwrap_or_else(|| s.to_string())
-}
-
 // ── MCP Server ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 struct ZoektMcp {
-    client: reqwest::Client,
-    base_url: String,
+    client: ZoektClient,
     tool_router: ToolRouter<Self>,
 }
 
 #[tool_router]
 impl ZoektMcp {
     fn new() -> Self {
-        let base_url =
-            std::env::var("ZOEKT_URL").unwrap_or_else(|_| "http://localhost:6070".to_string());
         Self {
-            client: reqwest::Client::new(),
-            base_url,
+            client: ZoektClient::from_env(),
             tool_router: Self::tool_router(),
         }
-    }
-
-    async fn post<Req: Serialize, Resp: serde::de::DeserializeOwned>(
-        &self,
-        endpoint: &str,
-        body: &Req,
-    ) -> Result<Resp, String> {
-        let url = format!("{}{}", self.base_url, endpoint);
-        let resp = self
-            .client
-            .post(&url)
-            .json(body)
-            .send()
-            .await
-            .map_err(|e| format!("Cannot reach Zoekt at {url}: {e}"))?;
-
-        let status = resp.status();
-        if !status.is_success() {
-            let text = resp.text().await.unwrap_or_default();
-            return Err(format!("Zoekt returned {status}: {text}"));
-        }
-
-        resp.json::<Resp>()
-            .await
-            .map_err(|e| format!("Failed to parse Zoekt response: {e}"))
     }
 
     #[tool(
@@ -324,7 +89,7 @@ impl ZoektMcp {
             }),
         };
 
-        match self.post::<_, SearchResponse>("/api/search", &req).await {
+        match self.client.search(&req).await {
             Ok(parsed) => match mode {
                 "content" => format_content(&parsed.result),
                 "count" => format_count(&parsed.result),
@@ -340,7 +105,7 @@ impl ZoektMcp {
             q: input.query.unwrap_or_default(),
         };
 
-        match self.post::<_, ListResponse>("/api/list", &req).await {
+        match self.client.list_repos(&req).await {
             Ok(parsed) => format_repos(&parsed),
             Err(e) => e,
         }
@@ -520,43 +285,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ── decode_b64 ──────────────────────────────────────────────────────
-
-    #[test]
-    fn test_decode_b64_empty_string() {
-        assert_eq!(decode_b64(""), "");
-    }
-
-    #[test]
-    fn test_decode_b64_valid_base64() {
-        let encoded = B64.encode("hello world");
-        assert_eq!(decode_b64(&encoded), "hello world");
-    }
-
-    #[test]
-    fn test_decode_b64_plain_text_fallback() {
-        // If a string isn't valid base64, decode_b64 falls back to the raw string.
-        // "hello world" is not valid base64 (contains a space).
-        assert_eq!(decode_b64("hello world"), "hello world");
-    }
-
-    #[test]
-    fn test_decode_b64_valid_base64_with_special_chars() {
-        let text = "fn main() {\n    println!(\"hello\");\n}";
-        let encoded = B64.encode(text);
-        assert_eq!(decode_b64(&encoded), text);
-    }
-
-    #[test]
-    fn test_decode_b64_invalid_utf8_falls_back() {
-        // Encode raw bytes that aren't valid UTF-8
-        let bad_bytes: [u8; 4] = [0xff, 0xfe, 0xfd, 0xfc];
-        let encoded = B64.encode(bad_bytes);
-        // decode succeeds as bytes but from_utf8 fails → falls back to raw string
-        let result = decode_b64(&encoded);
-        assert_eq!(result, encoded);
-    }
+    use base64::{engine::general_purpose::STANDARD as B64, Engine};
+    use zoekt_mcp::client::{
+        BranchInfo, ChunkMatch, FileMatch, LineMatch, Location, Range, RepoEntry, RepoInfo,
+        RepoList, RepoStats, SymbolInfo,
+    };
 
     // ── format_files ────────────────────────────────────────────────────
 
@@ -1042,174 +775,5 @@ mod tests {
         // No language → no parenthetical
         assert!(out.contains("--- Makefile ---"));
         assert!(!out.contains("()"));
-    }
-
-    // ── Serde round-trip tests for API types ────────────────────────────
-
-    #[test]
-    fn test_search_request_serialization() {
-        let req = SearchRequest {
-            q: "fn main".to_string(),
-            opts: Some(SearchOpts {
-                max_doc_display_count: 10,
-                num_context_lines: 2,
-                chunk_matches: true,
-                whole: false,
-            }),
-        };
-        let json = serde_json::to_string(&req).unwrap();
-        assert!(json.contains("\"Q\":\"fn main\""));
-        assert!(json.contains("\"MaxDocDisplayCount\":10"));
-        assert!(json.contains("\"NumContextLines\":2"));
-        assert!(json.contains("\"ChunkMatches\":true"));
-        assert!(json.contains("\"Whole\":false"));
-    }
-
-    #[test]
-    fn test_search_request_without_opts() {
-        let req = SearchRequest {
-            q: "test".to_string(),
-            opts: None,
-        };
-        let json = serde_json::to_string(&req).unwrap();
-        assert!(json.contains("\"Q\":\"test\""));
-        assert!(!json.contains("Opts"));
-    }
-
-    #[test]
-    fn test_list_request_serialization() {
-        let req = ListRequest {
-            q: "repo:test".to_string(),
-        };
-        let json = serde_json::to_string(&req).unwrap();
-        assert!(json.contains("\"Q\":\"repo:test\""));
-    }
-
-    #[test]
-    fn test_search_response_deserialization() {
-        let json = r#"{
-            "Result": {
-                "MatchCount": 42,
-                "FileCount": 5,
-                "Duration": 1000,
-                "Files": null
-            }
-        }"#;
-        let resp: SearchResponse = serde_json::from_str(json).unwrap();
-        assert_eq!(resp.result.match_count, 42);
-        assert_eq!(resp.result.file_count, 5);
-        assert_eq!(resp.result.duration, 1000);
-        assert!(resp.result.files.is_none());
-    }
-
-    #[test]
-    fn test_search_response_missing_duration_defaults() {
-        let json = r#"{
-            "Result": {
-                "MatchCount": 1,
-                "FileCount": 1,
-                "Files": []
-            }
-        }"#;
-        let resp: SearchResponse = serde_json::from_str(json).unwrap();
-        assert_eq!(resp.result.duration, 0);
-        assert!(resp.result.files.unwrap().is_empty());
-    }
-
-    #[test]
-    fn test_list_response_deserialization() {
-        let json = r#"{
-            "List": {
-                "Repos": [
-                    {
-                        "Repository": {
-                            "Name": "testrepo",
-                            "URL": "https://github.com/test/repo",
-                            "Branches": [
-                                {"Name": "main", "Version": "abc123"}
-                            ],
-                            "HasSymbols": true
-                        },
-                        "Stats": {
-                            "Documents": 100,
-                            "ContentBytes": 1048576,
-                            "IndexBytes": 524288
-                        }
-                    }
-                ]
-            }
-        }"#;
-        let resp: ListResponse = serde_json::from_str(json).unwrap();
-        let repos = resp.list.repos.unwrap();
-        assert_eq!(repos.len(), 1);
-        assert_eq!(repos[0].repository.name, "testrepo");
-        assert!(repos[0].repository.has_symbols);
-        assert_eq!(repos[0].repository.branches.len(), 1);
-        assert_eq!(repos[0].repository.branches[0].name, "main");
-        assert_eq!(repos[0].stats.documents, 100);
-        assert_eq!(repos[0].stats.content_bytes, 1_048_576);
-    }
-
-    #[test]
-    fn test_list_response_null_repos() {
-        let json = r#"{"List": {"Repos": null}}"#;
-        let resp: ListResponse = serde_json::from_str(json).unwrap();
-        assert!(resp.list.repos.is_none());
-    }
-
-    #[test]
-    fn test_file_match_deserialization_with_defaults() {
-        let json = r#"{
-            "FileName": "test.rs",
-            "ChunkMatches": null
-        }"#;
-        let fm: FileMatch = serde_json::from_str(json).unwrap();
-        assert_eq!(fm.file_name, "test.rs");
-        assert_eq!(fm.repository, "");
-        assert_eq!(fm.language, "");
-        assert!(fm.branches.is_empty());
-        assert_eq!(fm.version, "");
-        assert!(fm.chunk_matches.is_none());
-        assert!(fm.line_matches.is_none());
-        assert_eq!(fm.content, "");
-        assert_eq!(fm.score, 0.0);
-    }
-
-    #[test]
-    fn test_chunk_match_deserialization() {
-        let json = r#"{
-            "Content": "aGVsbG8=",
-            "ContentStart": {"ByteOffset": 0, "LineNumber": 1, "Column": 0},
-            "Ranges": [
-                {
-                    "Start": {"ByteOffset": 0, "LineNumber": 1, "Column": 0},
-                    "End": {"ByteOffset": 5, "LineNumber": 1, "Column": 5}
-                }
-            ],
-            "SymbolInfo": null
-        }"#;
-        let cm: ChunkMatch = serde_json::from_str(json).unwrap();
-        assert_eq!(cm.content, "aGVsbG8=");
-        assert_eq!(cm.content_start.line_number, 1);
-        assert_eq!(cm.ranges.len(), 1);
-        assert_eq!(cm.ranges[0].start.column, 0);
-        assert_eq!(cm.ranges[0].end.column, 5);
-        assert!(cm.symbol_info.is_none());
-    }
-
-    #[test]
-    fn test_line_match_deserialization() {
-        let json = r#"{
-            "Line": "aW1wb3J0IG9z",
-            "LineNumber": 1,
-            "Before": null,
-            "After": null
-        }"#;
-        let lm: LineMatch = serde_json::from_str(json).unwrap();
-        assert_eq!(lm.line, "aW1wb3J0IG9z");
-        assert_eq!(lm.line_number, 1);
-        assert!(lm.before.is_none());
-        assert!(lm.after.is_none());
-        assert!(!lm.file_name_match);
     }
 }
