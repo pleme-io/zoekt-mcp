@@ -153,8 +153,8 @@ in {
 
       parallelism = mkOption {
         type = types.int;
-        default = 4;
-        description = "Number of concurrent indexing processes (-parallelism).";
+        default = 2;
+        description = "Number of concurrent indexing processes (-parallelism). Lowered from 4 to 2 (2026-07-10) -- slow and eventually-consistent by default over fast and system-wide-fd-hungry; a fleet-wide re-index scans dozens of large repos, and full parallelism correlated with fd-table exhaustion. Override per-node if a workstation genuinely needs faster reindexing.";
       };
 
       fileLimit = mkOption {
@@ -283,6 +283,17 @@ in {
         command = "${mcpCfg.package}/bin/zoekt-mcp";
         args = ["daemon" "--config" "${zoektDaemonConfig}"];
         logDir = "${config.home.homeDirectory}/Library/Logs";
+        # Low-profile background indexing: never contends the system-wide fd
+        # table again (2026-07-10 — a full-parallelism zoekt-git-index run
+        # across dozens of large repos correlated with system-wide file-
+        # descriptor exhaustion that broke an unrelated `nix run .#rebuild`
+        # and other apps). ProcessType=Background + Nice + LowPriorityIO let
+        # macOS itself throttle scheduling; the fd cap is a hard OS ceiling,
+        # not a monitored soft limit.
+        processType = "Background";
+        nice = 10;
+        lowPriorityIO = true;
+        maxOpenFiles = 4096;
       })
     ]))
 
