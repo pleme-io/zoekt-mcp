@@ -4,7 +4,7 @@
 //! Missing tokens, API errors, and clone failures are logged and skipped.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use tracing::{error, info, warn};
@@ -18,6 +18,86 @@ struct GitHubRepo {
     clone_url: String,
     archived: bool,
     fork: bool,
+}
+
+// ── tend discovery-cache reader ─────────────────────────────────────
+//
+// tend (a sibling daemon on this fleet, its own 300s reconcile loop)
+// already discovers + caches every configured org/user's repo list at
+// `{XDG_CACHE_HOME:-~/.cache}/tend/discovery/{org}.json` with a 6-hour
+// TTL (see `tend/src/cache.rs::DiscoveryCache`). Without this, every
+// zoekt daemon tick (every `index_interval`, default 300s) re-derives
+// that same fact with a raw, uncached GitHub API pagination — the
+// single most wasteful call in the daemon's tick. Reading tend's
+// cache first turns a per-tick network listing into a per-6h one,
+// with zero coupling to the tend crate: this is a ~20-line local
+// reader of a 3-field JSON document, not a dependency.
+//
+// Deliberately NOT a `Cargo.toml` dependency on `tend` — the format is
+// simple enough that mirroring the read is cheaper and more stable
+// than a cross-repo type dependency.
+
+/// Mirror of tend's on-disk discovery-cache entry — a flat
+/// `{org, repos, timestamp}` JSON document. Only the fields this
+/// reader consumes are declared; `org` is present in the real file
+/// (redundant with the filename) but unused here — serde ignores it.
+#[derive(Debug, Deserialize)]
+struct TendCacheEntry {
+    repos: Vec<String>,
+    timestamp: u64,
+}
+
+/// tend's discovery-cache freshness window — mirrors
+/// `tend::cache::DEFAULT_TTL_SECS` (tend/src/cache.rs). A cache file
+/// older than this is treated as a miss, same as an absent file.
+const TEND_CACHE_TTL_SECS: u64 = 6 * 60 * 60;
+
+/// Resolve tend's cache root the same way tend does:
+/// `$XDG_CACHE_HOME/tend/discovery`, falling back to
+/// `~/.cache/tend/discovery` when unset. Mirrors
+/// `tend::cache::tend_cache_root()` (tend/src/cache.rs).
+fn tend_discovery_cache_dir() -> PathBuf {
+    std::env::var("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".cache")
+        })
+        .join("tend")
+        .join("discovery")
+}
+
+/// Read tend's discovery cache for `owner` from `cache_dir`, honoring
+/// its 6-hour TTL. Returns `None` uniformly on any miss — absent
+/// file, unparseable JSON, or a stale timestamp — so the caller
+/// always has a safe, unconditional fallback to live discovery.
+/// `cache_dir` is a parameter (rather than baked in) so tests can
+/// point it at a temp directory without touching the real
+/// `~/.cache/tend`.
+fn read_tend_cache_from(cache_dir: &Path, owner: &str) -> Option<Vec<String>> {
+    let path = cache_dir.join(format!("{owner}.json"));
+    let content = std::fs::read_to_string(path).ok()?;
+    let entry: TendCacheEntry = serde_json::from_str(&content).ok()?;
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    if now.saturating_sub(entry.timestamp) > TEND_CACHE_TTL_SECS {
+        return None;
+    }
+
+    Some(entry.repos)
+}
+
+/// Read tend's discovery cache for `owner` at its real on-disk
+/// location — the first-choice check before falling back to a live
+/// GitHub API listing. `None` whenever tend isn't installed or its
+/// cache is stale/absent for this owner; the caller falls through to
+/// `GitHubClient::list_repos` exactly as it always has.
+fn read_tend_cache(owner: &str) -> Option<Vec<String>> {
+    read_tend_cache_from(&tend_discovery_cache_dir(), owner)
 }
 
 /// GitHub API client with bearer token auth.
@@ -239,21 +319,57 @@ pub async fn resolve_all_repos(
     };
 
     for source in &config.sources {
-        info!(
-            "Discovering repos from {} {} (clone_base: {})",
-            match source.kind {
-                OwnerKind::Org => "org",
-                OwnerKind::User => "user",
-            },
-            source.owner,
-            source.clone_base
-        );
+        let repos: Vec<GitHubRepo> = if let Some(names) = read_tend_cache(&source.owner) {
+            // Cache hit — tend already has a fresh (<6h) repo list for
+            // this owner. Skip the network listing call entirely; only
+            // the LISTING is replaced, everything downstream (filter,
+            // local-path resolution, auto_clone) is unchanged. Cached
+            // entries carry no archived/fork flags (tend's cache is
+            // name-only, and tend already excludes archived repos
+            // before caching), so those two are synthesized as
+            // `false` — equivalent to tend's own upstream filtering
+            // for `archived`, and a documented relaxation for `fork`
+            // (forks survive tend's cache; `skip_forks` won't catch
+            // them via this path). `exclude` glob filtering is
+            // unaffected — it's name-based.
+            info!(
+                "Using tend's discovery cache for {} {} ({} repos) — skipping GitHub API listing",
+                match source.kind {
+                    OwnerKind::Org => "org",
+                    OwnerKind::User => "user",
+                },
+                source.owner,
+                names.len()
+            );
+            names
+                .into_iter()
+                .map(|name| {
+                    let clone_url = format!("https://github.com/{}/{}.git", source.owner, name);
+                    GitHubRepo {
+                        name,
+                        clone_url,
+                        archived: false,
+                        fork: false,
+                    }
+                })
+                .collect()
+        } else {
+            info!(
+                "Discovering repos from {} {} (clone_base: {})",
+                match source.kind {
+                    OwnerKind::Org => "org",
+                    OwnerKind::User => "user",
+                },
+                source.owner,
+                source.clone_base
+            );
 
-        let repos: Vec<GitHubRepo> = match client.list_repos(source).await {
-            Ok(r) => r,
-            Err(e) => {
-                error!("Failed to list repos for {}: {}", source.owner, e);
-                continue;
+            match client.list_repos(source).await {
+                Ok(r) => r,
+                Err(e) => {
+                    error!("Failed to list repos for {}: {}", source.owner, e);
+                    continue;
+                }
             }
         };
 
@@ -304,6 +420,116 @@ pub async fn resolve_all_repos(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── read_tend_cache_from ─────────────────────────────────────────────
+
+    fn write_cache_file(dir: &std::path::Path, owner: &str, contents: &str) {
+        std::fs::write(dir.join(format!("{owner}.json")), contents).unwrap();
+    }
+
+    fn now_secs() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    }
+
+    #[test]
+    fn test_read_tend_cache_fresh_hit() {
+        let dir = tempfile::tempdir().unwrap();
+        let json = format!(
+            r#"{{"org":"pleme-io","repos":["repo-a","repo-b"],"timestamp":{}}}"#,
+            now_secs()
+        );
+        write_cache_file(dir.path(), "pleme-io", &json);
+
+        let result = read_tend_cache_from(dir.path(), "pleme-io");
+        assert_eq!(result, Some(vec!["repo-a".to_string(), "repo-b".to_string()]));
+    }
+
+    #[test]
+    fn test_read_tend_cache_stale_is_miss() {
+        let dir = tempfile::tempdir().unwrap();
+        // timestamp older than the 6h TTL
+        let stale_timestamp = now_secs().saturating_sub(TEND_CACHE_TTL_SECS + 60);
+        let json = format!(
+            r#"{{"org":"pleme-io","repos":["repo-a"],"timestamp":{stale_timestamp}}}"#
+        );
+        write_cache_file(dir.path(), "pleme-io", &json);
+
+        let result = read_tend_cache_from(dir.path(), "pleme-io");
+        assert_eq!(result, None, "stale cache entry must be treated as a miss");
+    }
+
+    #[test]
+    fn test_read_tend_cache_at_ttl_boundary_is_hit() {
+        let dir = tempfile::tempdir().unwrap();
+        // just inside the TTL window
+        let almost_stale = now_secs().saturating_sub(TEND_CACHE_TTL_SECS - 60);
+        let json = format!(
+            r#"{{"org":"pleme-io","repos":["repo-a"],"timestamp":{almost_stale}}}"#
+        );
+        write_cache_file(dir.path(), "pleme-io", &json);
+
+        let result = read_tend_cache_from(dir.path(), "pleme-io");
+        assert_eq!(result, Some(vec!["repo-a".to_string()]));
+    }
+
+    #[test]
+    fn test_read_tend_cache_missing_file_is_miss() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = read_tend_cache_from(dir.path(), "no-such-owner");
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_read_tend_cache_malformed_json_is_miss() {
+        let dir = tempfile::tempdir().unwrap();
+        write_cache_file(dir.path(), "pleme-io", "not valid json!!!");
+
+        let result = read_tend_cache_from(dir.path(), "pleme-io");
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_read_tend_cache_missing_required_field_is_miss() {
+        let dir = tempfile::tempdir().unwrap();
+        // valid JSON, but missing `repos` — must fail to deserialize,
+        // not silently default to an empty list.
+        write_cache_file(dir.path(), "pleme-io", r#"{"org":"pleme-io","timestamp":123}"#);
+
+        let result = read_tend_cache_from(dir.path(), "pleme-io");
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_read_tend_cache_ignores_extra_unknown_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let json = format!(
+            r#"{{"org":"pleme-io","repos":["repo-a"],"timestamp":{},"extra_field":"whatever"}}"#,
+            now_secs()
+        );
+        write_cache_file(dir.path(), "pleme-io", &json);
+
+        let result = read_tend_cache_from(dir.path(), "pleme-io");
+        assert_eq!(result, Some(vec!["repo-a".to_string()]));
+    }
+
+    #[test]
+    fn test_read_tend_cache_empty_repos_list() {
+        let dir = tempfile::tempdir().unwrap();
+        let json = format!(r#"{{"org":"empty-org","repos":[],"timestamp":{}}}"#, now_secs());
+        write_cache_file(dir.path(), "empty-org", &json);
+
+        let result = read_tend_cache_from(dir.path(), "empty-org");
+        assert_eq!(result, Some(vec![]));
+    }
+
+    #[test]
+    fn test_tend_discovery_cache_dir_ends_with_tend_discovery() {
+        let dir = tend_discovery_cache_dir();
+        assert!(dir.ends_with("tend/discovery"), "got: {}", dir.display());
+    }
 
     // ── matches_pattern ─────────────────────────────────────────────────
 
