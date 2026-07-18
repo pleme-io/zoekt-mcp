@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cargo_lock_sha256": "224a312c9399b64a20271f74cdc23fee2af857fd941e8c03549b557a68e8796e",
+  "cargo_lock_sha256": "65fa55fafd21230433c88bab4672720365c391a4c7b7778187e986eca1145699",
   "target_resolves": {
     "base": {
       "aho-corasick-1.1.4": {
@@ -6710,7 +6710,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zoekt-mcp-0.1.4": {
+      "zoekt-mcp-0.1.5": {
         "runtime_dependencies": [
           {
             "name": "anyhow",
@@ -10220,7 +10220,7 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "zoekt-mcp-0.1.4": {
+    "zoekt-mcp-0.1.5": {
       "edition": "2021",
       "lib_target": {
         "name": "zoekt_mcp",

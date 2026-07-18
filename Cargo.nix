@@ -519,9 +519,9 @@ rec {
       };
       "cc" = rec {
         crateName = "cc";
-        version = "1.2.67";
+        version = "1.3.0";
         edition = "2018";
-        sha256 = "0f0srhm5s5371nqk7dlini2knpfhml1hxcp18ksixwyhlxjx4zg1";
+        sha256 = "1f27b93qhs65bjq04ljwgwxf8xq2qbba4j1k99cv9d9qav88i5f8";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
         ];
@@ -1247,9 +1247,9 @@ rec {
       };
       "futures" = rec {
         crateName = "futures";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "0b9q86r5ar18v5xjiyqn7sb8sa32xv98qqnfz779gl7ns7lpw54b";
+        sha256 = "066j5aqz8an05xh4hn5ljdnjn80z3g335v4grx4gaifr57wg3358";
         dependencies = [
           {
             name = "futures-channel";
@@ -1309,9 +1309,9 @@ rec {
       };
       "futures-channel" = rec {
         crateName = "futures-channel";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "07fcyzrmbmh7fh4ainilf1s7gnwvnk07phdq77jkb9fpa2ffifq7";
+        sha256 = "1bn5hlhfkl1sgypmiachaqcgwmr6wmjal7dyhfyb1zkazvs90996";
         libName = "futures_channel";
         dependencies = [
           {
@@ -1337,9 +1337,9 @@ rec {
       };
       "futures-core" = rec {
         crateName = "futures-core";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "07bbvwjbm5g2i330nyr1kcvjapkmdqzl4r6mqv75ivvjaa0m0d3y";
+        sha256 = "1iqdbvcdlplfr2g43h7xrfkv2sg5p1a26x8acz1xgxl07i3hrm9c";
         libName = "futures_core";
         features = {
           "default" = [ "std" ];
@@ -1350,9 +1350,9 @@ rec {
       };
       "futures-executor" = rec {
         crateName = "futures-executor";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "17aplz3ns74qn7a04qg7qlgsdx5iwwwkd4jvdfra6hl3h4w9rwms";
+        sha256 = "0n3lpkmcfrsnh40i4armn040gnqbpd257hz5qs46zipjr6f8fm37";
         libName = "futures_executor";
         dependencies = [
           {
@@ -1380,9 +1380,9 @@ rec {
       };
       "futures-io" = rec {
         crateName = "futures-io";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "063pf5m6vfmyxj74447x8kx9q8zj6m9daamj4hvf49yrg9fs7jyf";
+        sha256 = "0yjx13qdm9b2p4w00ddw85k6yccnnmqrlrrz8yfmi5jg7jmfqxs5";
         libName = "futures_io";
         features = {
           "default" = [ "std" ];
@@ -1391,9 +1391,9 @@ rec {
       };
       "futures-macro" = rec {
         crateName = "futures-macro";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "0ys4b1lk7s0bsj29pv42bxsaavalch35rprp64s964p40c1bfdg8";
+        sha256 = "02xiyd5y1nk9b805aympj4wq2czgvxnhcml9w9xkc665d3g3qv9d";
         procMacro = true;
         libName = "futures_macro";
         dependencies = [
@@ -1415,9 +1415,9 @@ rec {
       };
       "futures-sink" = rec {
         crateName = "futures-sink";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "14q8ml7hn5a6gyy9ri236j28kh0svqmrk4gcg0wh26rkazhm95y3";
+        sha256 = "01z38z344hpryw84b6r0rbwcb669d8pyvl2szg10aqwx96n1hi73";
         libName = "futures_sink";
         features = {
           "default" = [ "std" ];
@@ -1427,9 +1427,9 @@ rec {
       };
       "futures-task" = rec {
         crateName = "futures-task";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "14s3vqf8llz3kjza33vn4ixg6kwxp61xrysn716h0cwwsnri2xq3";
+        sha256 = "02f1y1yvjg1cv998zkgl1706pi9y4fyc9045l1hlmyqyhclfscdj";
         libName = "futures_task";
         features = {
           "default" = [ "std" ];
@@ -1439,9 +1439,9 @@ rec {
       };
       "futures-util" = rec {
         crateName = "futures-util";
-        version = "0.3.32";
+        version = "0.3.33";
         edition = "2018";
-        sha256 = "1mn60lw5kh32hz9isinjlpw34zx708fk5q1x0m40n6g6jq9a971q";
+        sha256 = "1anyg40j5www5l22r2jbn1birsafz4q1w9qmcjk4vqzwasi90ym7";
         libName = "futures_util";
         dependencies = [
           {
@@ -1511,7 +1511,10 @@ rec {
           "io-compat" = [ "io" "compat" "tokio-io" "libc" ];
           "libc" = [ "dep:libc" ];
           "memchr" = [ "dep:memchr" ];
-          "portable-atomic" = [ "futures-core/portable-atomic" ];
+          "portable-atomic" = [ "futures-core/portable-atomic" "portable_atomic_crate" ];
+          "portable-atomic-alloc" = [ "portable-atomic-util/alloc" "portable-atomic" ];
+          "portable-atomic-util" = [ "dep:portable-atomic-util" ];
+          "portable_atomic_crate" = [ "dep:portable_atomic_crate" ];
           "sink" = [ "futures-sink" ];
           "slab" = [ "dep:slab" ];
           "spin" = [ "dep:spin" ];
@@ -1524,13 +1527,13 @@ rec {
       };
       "gen-macros" = rec {
         crateName = "gen-macros";
-        version = "0.1.19";
+        version = "0.1.22";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/gen";
-          rev = "2e575c5b50d39ec1060239f65280fab674673aa3";
-          sha256 = "0qzxdmpxh4j89vnwp0d9j4dxqvawcm0zfgs7zhg07idis4v60xcz";
+          rev = "27231a64b77655fe89f42048a8264f72fa02f7f4";
+          sha256 = "07rk4jndgsdmbxscp2cp74bwh7jkxwbqfpkr83srh02zfzs7w1aj";
         };
         procMacro = true;
         libName = "gen_macros";
@@ -1556,13 +1559,13 @@ rec {
       };
       "gen-platform" = rec {
         crateName = "gen-platform";
-        version = "0.1.19";
+        version = "0.1.22";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/gen";
-          rev = "2e575c5b50d39ec1060239f65280fab674673aa3";
-          sha256 = "0qzxdmpxh4j89vnwp0d9j4dxqvawcm0zfgs7zhg07idis4v60xcz";
+          rev = "27231a64b77655fe89f42048a8264f72fa02f7f4";
+          sha256 = "07rk4jndgsdmbxscp2cp74bwh7jkxwbqfpkr83srh02zfzs7w1aj";
         };
         libName = "gen_platform";
         authors = [
@@ -1599,13 +1602,13 @@ rec {
       };
       "gen-types" = rec {
         crateName = "gen-types";
-        version = "0.1.19";
+        version = "0.1.22";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/gen";
-          rev = "2e575c5b50d39ec1060239f65280fab674673aa3";
-          sha256 = "0qzxdmpxh4j89vnwp0d9j4dxqvawcm0zfgs7zhg07idis4v60xcz";
+          rev = "27231a64b77655fe89f42048a8264f72fa02f7f4";
+          sha256 = "07rk4jndgsdmbxscp2cp74bwh7jkxwbqfpkr83srh02zfzs7w1aj";
         };
         libName = "gen_types";
         authors = [
@@ -5311,13 +5314,13 @@ rec {
       };
       "shikumi" = rec {
         crateName = "shikumi";
-        version = "0.1.318";
+        version = "0.1.321";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/shikumi";
-          rev = "0802c4d8b7b16c8e435eed546edb011206c8ba50";
-          sha256 = "0q3c2isf9ipnw0q92qmalj46n06cmp9pkrd8irmi8hcp9yjbh1yp";
+          rev = "cbe9cd5e14cbf69e38788b5c4c57d5177e10fa1b";
+          sha256 = "01ii8rh7p5hfsf7ddckgnkj0vjz5jc3bys59yf9v6q8g9a9dh7cw";
         };
         dependencies = [
           {
@@ -7687,9 +7690,9 @@ rec {
       };
       "webpki-roots" = rec {
         crateName = "webpki-roots";
-        version = "1.0.8";
+        version = "1.0.9";
         edition = "2021";
-        sha256 = "1gricxbz1xk561qjflv5q2y4bap5lyspv7c2dxygl0920c3cp1dz";
+        sha256 = "0apja04243wz3vi26pqjg4sq8cqaac66prj490sgb1crlc4rvkbx";
         libName = "webpki_roots";
         dependencies = [
           {
@@ -9193,7 +9196,7 @@ rec {
       };
       "zoekt-mcp" = rec {
         crateName = "zoekt-mcp";
-        version = "0.1.4";
+        version = "0.1.5";
         edition = "2021";
         crateBin = [
           {
