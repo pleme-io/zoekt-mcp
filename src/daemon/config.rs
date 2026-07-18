@@ -366,7 +366,16 @@ impl DaemonConfig {
             "-index".to_string(),
             self.index_dir.clone(),
             "-listen".to_string(),
-            format!(":{}", self.port),
+            // Bind loopback with an explicit host, NOT an empty host (`:PORT`).
+            // zoekt-webserver's self-watchdog derives its healthz URL from this
+            // listen value: `:PORT` → `http://:PORT/healthz`, and on macOS/BSD
+            // dialing an empty-host address fails with EADDRNOTAVAIL
+            // ("can't assign requested address") — so the watchdog reports a
+            // false failure and kills the webserver every ~90s (a respawn
+            // livelock that flaps :6070). An explicit `127.0.0.1` gives the
+            // watchdog a real connect target; the MCP client's default
+            // `http://localhost:6070` resolves to the same loopback.
+            format!("127.0.0.1:{}", self.port),
         ];
 
         if let Some(ref log_dir) = self.webserver.log_dir {
@@ -654,7 +663,7 @@ repos:
         assert!(args.contains(&"-index".to_string()));
         assert!(args.contains(&config.index_dir));
         assert!(args.contains(&"-listen".to_string()));
-        assert!(args.contains(&":6070".to_string()));
+        assert!(args.contains(&"127.0.0.1:6070".to_string()));
         assert!(args.contains(&"-rpc".to_string()));
         assert!(args.contains(&"-log_refresh".to_string()));
         assert!(args.contains(&"24h".to_string()));
