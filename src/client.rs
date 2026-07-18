@@ -6,14 +6,24 @@
 //! surface so a standalone consumer (no MCP session) can use it too.
 
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Default request timeout. Zoekt queries are normally sub-second; this
 /// guards against a wedged daemon blocking a caller indefinitely — the
 /// client this was extracted from built `reqwest::Client::new()` with no
 /// timeout at all.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// How long a request keeps retrying while the webserver is unreachable / starting.
+/// The daemon (+ launchd) restart a crashed or index-updated `zoekt-webserver`, and
+/// a fresh one is briefly unbindable while it re-loads its shards. Retrying across
+/// that window makes it INVISIBLE to the caller — a search waits it out instead of
+/// hard-failing with "Cannot reach Zoekt". Connection-refused fails fast, so this
+/// budget is spent on short backoff sleeps, not on blocking; a genuine error (4xx /
+/// non-transient 5xx / parse) is NOT retried. Overridable via `ZOEKT_RETRY_SECS`.
+pub const DEFAULT_RETRY_BUDGET: Duration = Duration::from_secs(25);
 
 pub const DEFAULT_BASE_URL: &str = "http://localhost:6070";
 
@@ -23,6 +33,9 @@ pub const DEFAULT_BASE_URL: &str = "http://localhost:6070";
 pub struct ZoektClient {
     http: reqwest::Client,
     base_url: String,
+    /// How long a request retries across a webserver restart / shard-reload window
+    /// before surfacing a failure (see [`DEFAULT_RETRY_BUDGET`]).
+    retry_budget: Duration,
 }
 
 impl ZoektClient {
@@ -41,15 +54,27 @@ impl ZoektClient {
         Self {
             http,
             base_url: base_url.into(),
+            retry_budget: DEFAULT_RETRY_BUDGET,
         }
     }
 
+    /// Override the restart-window retry budget (tests use a short one).
+    #[must_use]
+    pub fn with_retry_budget(mut self, budget: Duration) -> Self {
+        self.retry_budget = budget;
+        self
+    }
+
     /// Build a client from the `ZOEKT_URL` env var, falling back to
-    /// [`DEFAULT_BASE_URL`].
+    /// [`DEFAULT_BASE_URL`]. `ZOEKT_RETRY_SECS` overrides the retry budget.
     pub fn from_env() -> Self {
         let base_url =
             std::env::var("ZOEKT_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
-        Self::new(base_url)
+        let mut client = Self::new(base_url);
+        if let Some(secs) = std::env::var("ZOEKT_RETRY_SECS").ok().and_then(|s| s.parse().ok()) {
+            client.retry_budget = Duration::from_secs(secs);
+        }
+        client
     }
 
     async fn post<Req: Serialize, Resp: serde::de::DeserializeOwned>(
@@ -58,23 +83,49 @@ impl ZoektClient {
         body: &Req,
     ) -> Result<Resp, String> {
         let url = format!("{}{}", self.base_url, endpoint);
-        let resp = self
-            .http
-            .post(&url)
-            .json(body)
-            .send()
-            .await
-            .map_err(|e| format!("Cannot reach Zoekt at {url}: {e}"))?;
-
-        let status = resp.status();
-        if !status.is_success() {
-            let text = resp.text().await.unwrap_or_default();
-            return Err(format!("Zoekt returned {status}: {text}"));
-        }
-
-        resp.json::<Resp>()
-            .await
-            .map_err(|e| format!("Failed to parse Zoekt response: {e}"))
+        // Retry across the webserver's restart / shard-reload down-window (the daemon
+        // + launchd restart a crashed/updated webserver; a fresh one is briefly
+        // unreachable). This makes the window INVISIBLE to the caller — a search
+        // waits it out instead of hard-failing. Only a CONNECTION error or a
+        // starting webserver's 502/503/504 is transient; a real 4xx / other 5xx /
+        // parse error is a genuine failure and is NOT retried.
+        let start = Instant::now();
+        let mut backoff = Duration::from_millis(250);
+        let last_err = loop {
+            let attempt = match self.http.post(&url).json(body).send().await {
+                Ok(resp) => {
+                    let status = resp.status();
+                    if status.is_success() {
+                        return resp
+                            .json::<Resp>()
+                            .await
+                            .map_err(|e| format!("Failed to parse Zoekt response: {e}"));
+                    }
+                    if matches!(
+                        status,
+                        StatusCode::SERVICE_UNAVAILABLE
+                            | StatusCode::BAD_GATEWAY
+                            | StatusCode::GATEWAY_TIMEOUT
+                    ) {
+                        format!("Zoekt at {url} is starting up ({status})")
+                    } else {
+                        // A genuine, non-transient error — surface it immediately.
+                        let text = resp.text().await.unwrap_or_default();
+                        return Err(format!("Zoekt returned {status}: {text}"));
+                    }
+                }
+                Err(e) => format!("Cannot reach Zoekt at {url}: {e}"),
+            };
+            if start.elapsed() + backoff > self.retry_budget {
+                break attempt;
+            }
+            tokio::time::sleep(backoff).await;
+            backoff = (backoff * 2).min(Duration::from_secs(3));
+        };
+        Err(format!(
+            "{last_err} — still unavailable after {}s of retries; zoekt is likely restarting or reindexing, retry shortly",
+            start.elapsed().as_secs()
+        ))
     }
 
     pub async fn search(&self, req: &SearchRequest) -> Result<SearchResponse, String> {
@@ -301,6 +352,38 @@ pub struct RepoStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── the down-window seal (invariant) ────────────────────────────────
+
+    /// The seal, as a tested invariant: a search against a DOWN webserver is
+    /// RETRIED across its restart/reload window (bounded by `retry_budget`) rather
+    /// than hard-failing on the first connection error — so a transient down-window
+    /// is invisible to the caller. Points at a reliably-closed port with a short
+    /// budget so the test is fast.
+    #[tokio::test]
+    async fn a_down_webserver_is_retried_not_hard_failed() {
+        // `127.0.0.1:1` is reliably closed → connection refused (fast per attempt).
+        let client =
+            ZoektClient::new("http://127.0.0.1:1").with_retry_budget(Duration::from_millis(1500));
+        let req = SearchRequest { q: "anything".to_string(), opts: None };
+        let start = Instant::now();
+        let err = match client.search(&req).await {
+            Ok(_) => panic!("expected a failure against a reliably-closed port"),
+            Err(e) => e,
+        };
+        let elapsed = start.elapsed();
+        // It spent the budget backing off (retried), not a single instant fail.
+        assert!(
+            elapsed >= Duration::from_millis(400),
+            "expected retries to consume ~the budget, took {elapsed:?}"
+        );
+        // The final message names the transient/reindexing nature + guides a retry.
+        assert!(err.contains("retries"), "final error should mention retries: {err}");
+        assert!(
+            err.contains("retry shortly"),
+            "final error should guide a retry: {err}"
+        );
+    }
 
     // ── decode_b64 ──────────────────────────────────────────────────────
 
