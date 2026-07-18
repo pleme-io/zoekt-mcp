@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cargo_lock_sha256": "715902e2d9f5d5ee76f6e7f88e17e05a2f8fd739bc702447f5bd6a489ff92690",
+  "cargo_lock_sha256": "224a312c9399b64a20271f74cdc23fee2af857fd941e8c03549b557a68e8796e",
   "target_resolves": {
     "base": {
       "aho-corasick-1.1.4": {
@@ -223,7 +223,7 @@
           "std"
         ]
       },
-      "cc-1.2.67": {
+      "cc-1.3.0": {
         "runtime_dependencies": [
           {
             "name": "find_msvc_tools",
@@ -861,11 +861,11 @@
           "std"
         ]
       },
-      "futures-0.3.32": {
+      "futures-0.3.33": {
         "runtime_dependencies": [
           {
             "name": "futures_channel",
-            "package_key": "futures-channel-0.3.32",
+            "package_key": "futures-channel-0.3.33",
             "kind": "normal",
             "features": [
               "sink"
@@ -877,7 +877,7 @@
           },
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -887,7 +887,7 @@
           },
           {
             "name": "futures_executor",
-            "package_key": "futures-executor-0.3.32",
+            "package_key": "futures-executor-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -897,7 +897,7 @@
           },
           {
             "name": "futures_io",
-            "package_key": "futures-io-0.3.32",
+            "package_key": "futures-io-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -907,7 +907,7 @@
           },
           {
             "name": "futures_sink",
-            "package_key": "futures-sink-0.3.32",
+            "package_key": "futures-sink-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -917,7 +917,7 @@
           },
           {
             "name": "futures_task",
-            "package_key": "futures-task-0.3.32",
+            "package_key": "futures-task-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -927,7 +927,7 @@
           },
           {
             "name": "futures_util",
-            "package_key": "futures-util-0.3.32",
+            "package_key": "futures-util-0.3.33",
             "kind": "normal",
             "features": [
               "sink"
@@ -948,11 +948,11 @@
           "std"
         ]
       },
-      "futures-channel-0.3.32": {
+      "futures-channel-0.3.33": {
         "runtime_dependencies": [
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -962,7 +962,7 @@
           },
           {
             "name": "futures_sink",
-            "package_key": "futures-sink-0.3.32",
+            "package_key": "futures-sink-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -980,7 +980,7 @@
           "std"
         ]
       },
-      "futures-core-0.3.32": {
+      "futures-core-0.3.33": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -989,11 +989,11 @@
           "std"
         ]
       },
-      "futures-executor-0.3.32": {
+      "futures-executor-0.3.33": {
         "runtime_dependencies": [
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1003,7 +1003,7 @@
           },
           {
             "name": "futures_task",
-            "package_key": "futures-task-0.3.32",
+            "package_key": "futures-task-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1013,7 +1013,7 @@
           },
           {
             "name": "futures_util",
-            "package_key": "futures-util-0.3.32",
+            "package_key": "futures-util-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1027,14 +1027,14 @@
           "std"
         ]
       },
-      "futures-io-0.3.32": {
+      "futures-io-0.3.33": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
           "std"
         ]
       },
-      "futures-macro-0.3.32": {
+      "futures-macro-0.3.33": {
         "runtime_dependencies": [
           {
             "name": "proc_macro2",
@@ -1072,7 +1072,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "futures-sink-0.3.32": {
+      "futures-sink-0.3.33": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -1081,7 +1081,7 @@
           "std"
         ]
       },
-      "futures-task-0.3.32": {
+      "futures-task-0.3.33": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -1089,11 +1089,11 @@
           "std"
         ]
       },
-      "futures-util-0.3.32": {
+      "futures-util-0.3.33": {
         "runtime_dependencies": [
           {
             "name": "futures_channel",
-            "package_key": "futures-channel-0.3.32",
+            "package_key": "futures-channel-0.3.33",
             "kind": "normal",
             "features": [
               "std"
@@ -1105,7 +1105,7 @@
           },
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1115,7 +1115,7 @@
           },
           {
             "name": "futures_io",
-            "package_key": "futures-io-0.3.32",
+            "package_key": "futures-io-0.3.33",
             "kind": "normal",
             "features": [
               "std"
@@ -1127,7 +1127,7 @@
           },
           {
             "name": "futures_macro",
-            "package_key": "futures-macro-0.3.32",
+            "package_key": "futures-macro-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1137,7 +1137,7 @@
           },
           {
             "name": "futures_sink",
-            "package_key": "futures-sink-0.3.32",
+            "package_key": "futures-sink-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1147,7 +1147,7 @@
           },
           {
             "name": "futures_task",
-            "package_key": "futures-task-0.3.32",
+            "package_key": "futures-task-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1203,7 +1203,7 @@
           "std"
         ]
       },
-      "gen-macros-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": {
+      "gen-macros-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": {
         "runtime_dependencies": [
           {
             "name": "proc_macro2",
@@ -1242,11 +1242,11 @@
         "build_dependencies": [],
         "features": []
       },
-      "gen-platform-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": {
+      "gen-platform-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": {
         "runtime_dependencies": [
           {
             "name": "gen_macros",
-            "package_key": "gen-macros-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3",
+            "package_key": "gen-macros-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1256,7 +1256,7 @@
           },
           {
             "name": "gen_types",
-            "package_key": "gen-types-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3",
+            "package_key": "gen-types-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1310,7 +1310,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "gen-types-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": {
+      "gen-types-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": {
         "runtime_dependencies": [
           {
             "name": "blake3",
@@ -1612,7 +1612,7 @@
           },
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1688,7 +1688,7 @@
           },
           {
             "name": "futures_channel",
-            "package_key": "futures-channel-0.3.32",
+            "package_key": "futures-channel-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1698,7 +1698,7 @@
           },
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1876,7 +1876,7 @@
           },
           {
             "name": "webpki_roots",
-            "package_key": "webpki-roots-1.0.8",
+            "package_key": "webpki-roots-1.0.9",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1918,7 +1918,7 @@
           },
           {
             "name": "futures_channel",
-            "package_key": "futures-channel-0.3.32",
+            "package_key": "futures-channel-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1928,7 +1928,7 @@
           },
           {
             "name": "futures_util",
-            "package_key": "futures-util-0.3.32",
+            "package_key": "futures-util-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -3523,7 +3523,7 @@
           },
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -3783,7 +3783,7 @@
           },
           {
             "name": "webpki_roots",
-            "package_key": "webpki-roots-1.0.8",
+            "package_key": "webpki-roots-1.0.9",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -3854,7 +3854,7 @@
           },
           {
             "name": "futures",
-            "package_key": "futures-0.3.32",
+            "package_key": "futures-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4671,7 +4671,7 @@
           "tilde"
         ]
       },
-      "shikumi-0.1.318-0802c4d8b7b16c8e435eed546edb011206c8ba50": {
+      "shikumi-0.1.321-cbe9cd5e14cbf69e38788b5c4c57d5177e10fa1b": {
         "runtime_dependencies": [
           {
             "name": "arc_swap",
@@ -4721,7 +4721,7 @@
           },
           {
             "name": "gen_platform",
-            "package_key": "gen-platform-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3",
+            "package_key": "gen-platform-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4731,7 +4731,7 @@
           },
           {
             "name": "gen_types",
-            "package_key": "gen-types-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3",
+            "package_key": "gen-types-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4960,7 +4960,7 @@
         "runtime_dependencies": [
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -5509,7 +5509,7 @@
           },
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5519,7 +5519,7 @@
           },
           {
             "name": "futures_sink",
-            "package_key": "futures-sink-0.3.32",
+            "package_key": "futures-sink-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5717,7 +5717,7 @@
         "runtime_dependencies": [
           {
             "name": "futures_core",
-            "package_key": "futures-core-0.3.32",
+            "package_key": "futures-core-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5727,7 +5727,7 @@
           },
           {
             "name": "futures_util",
-            "package_key": "futures-util-0.3.32",
+            "package_key": "futures-util-0.3.33",
             "kind": "normal",
             "features": [
               "alloc"
@@ -5824,7 +5824,7 @@
           },
           {
             "name": "futures_util",
-            "package_key": "futures-util-0.3.32",
+            "package_key": "futures-util-0.3.33",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -6387,7 +6387,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "webpki-roots-1.0.8": {
+      "webpki-roots-1.0.9": {
         "runtime_dependencies": [
           {
             "name": "pki_types",
@@ -6710,7 +6710,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zoekt-mcp-0.1.3": {
+      "zoekt-mcp-0.1.4": {
         "runtime_dependencies": [
           {
             "name": "anyhow",
@@ -6824,7 +6824,7 @@
           },
           {
             "name": "shikumi",
-            "package_key": "shikumi-0.1.318-0802c4d8b7b16c8e435eed546edb011206c8ba50",
+            "package_key": "shikumi-0.1.321-cbe9cd5e14cbf69e38788b5c4c57d5177e10fa1b",
             "kind": "normal",
             "features": [
               "cli"
@@ -6932,7 +6932,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -7224,7 +7224,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -7361,7 +7361,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -7626,7 +7626,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -7794,7 +7794,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -8059,7 +8059,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -8237,7 +8237,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -8524,7 +8524,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -8671,7 +8671,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -8931,7 +8931,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -9109,7 +9109,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -9369,7 +9369,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.67",
+                "package_key": "cc-1.3.0",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -9543,7 +9543,7 @@
     "bytes-1.12.1": {
       "edition": "2021"
     },
-    "cc-1.2.67": {
+    "cc-1.3.0": {
       "edition": "2018"
     },
     "cfg-if-1.0.4": {
@@ -9641,42 +9641,42 @@
     "form_urlencoded-1.2.2": {
       "edition": "2018"
     },
-    "futures-0.3.32": {
+    "futures-0.3.33": {
       "edition": "2018"
     },
-    "futures-channel-0.3.32": {
+    "futures-channel-0.3.33": {
       "edition": "2018"
     },
-    "futures-core-0.3.32": {
+    "futures-core-0.3.33": {
       "edition": "2018"
     },
-    "futures-executor-0.3.32": {
+    "futures-executor-0.3.33": {
       "edition": "2018"
     },
-    "futures-io-0.3.32": {
+    "futures-io-0.3.33": {
       "edition": "2018"
     },
-    "futures-macro-0.3.32": {
+    "futures-macro-0.3.33": {
       "edition": "2018",
       "proc_macro": true
     },
-    "futures-sink-0.3.32": {
+    "futures-sink-0.3.33": {
       "edition": "2018"
     },
-    "futures-task-0.3.32": {
+    "futures-task-0.3.33": {
       "edition": "2018"
     },
-    "futures-util-0.3.32": {
+    "futures-util-0.3.33": {
       "edition": "2018"
     },
-    "gen-macros-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": {
+    "gen-macros-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": {
       "edition": "2024",
       "proc_macro": true
     },
-    "gen-platform-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": {
+    "gen-platform-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": {
       "edition": "2024"
     },
-    "gen-types-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": {
+    "gen-types-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": {
       "edition": "2024"
     },
     "getrandom-0.2.17": {
@@ -10005,7 +10005,7 @@
     "shellexpand-3.1.2": {
       "edition": "2018"
     },
-    "shikumi-0.1.318-0802c4d8b7b16c8e435eed546edb011206c8ba50": {
+    "shikumi-0.1.321-cbe9cd5e14cbf69e38788b5c4c57d5177e10fa1b": {
       "edition": "2024"
     },
     "shlex-2.0.1": {
@@ -10177,7 +10177,7 @@
     "want-0.3.1": {
       "edition": "2018"
     },
-    "webpki-roots-1.0.8": {
+    "webpki-roots-1.0.9": {
       "edition": "2021"
     },
     "winnow-0.7.15": {
@@ -10220,7 +10220,7 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "zoekt-mcp-0.1.3": {
+    "zoekt-mcp-0.1.4": {
       "edition": "2021",
       "lib_target": {
         "name": "zoekt_mcp",
@@ -10235,10 +10235,10 @@
     }
   },
   "git_nar_sha256": {
-    "gen-macros-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": "sha256-n3VgNtGxxQMe/Ec/90FlXG3cG5GpgcvtTkgS2G9t/WM=",
-    "gen-platform-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": "sha256-n3VgNtGxxQMe/Ec/90FlXG3cG5GpgcvtTkgS2G9t/WM=",
-    "gen-types-0.1.19-2e575c5b50d39ec1060239f65280fab674673aa3": "sha256-n3VgNtGxxQMe/Ec/90FlXG3cG5GpgcvtTkgS2G9t/WM=",
-    "shikumi-0.1.318-0802c4d8b7b16c8e435eed546edb011206c8ba50": "sha256-1we4pE+XQRRrjqjledOtzABriKSqYpEw4PbG5HQUbGA="
+    "gen-macros-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": "sha256-UgV+9HdfAJj1QHlehxfvUx7IFzmXict0X7Xp16wkMx8=",
+    "gen-platform-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": "sha256-UgV+9HdfAJj1QHlehxfvUx7IFzmXict0X7Xp16wkMx8=",
+    "gen-types-0.1.22-27231a64b77655fe89f42048a8264f72fa02f7f4": "sha256-UgV+9HdfAJj1QHlehxfvUx7IFzmXict0X7Xp16wkMx8=",
+    "shikumi-0.1.321-cbe9cd5e14cbf69e38788b5c4c57d5177e10fa1b": "sha256-nB3YkkoPYbOT86lovwaT5csN5LRvstaO0w6We2BGMQY="
   },
   "flake_metadata": {}
 }
