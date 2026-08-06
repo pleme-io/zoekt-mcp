@@ -5319,13 +5319,13 @@ rec {
       };
       "shikumi" = rec {
         crateName = "shikumi";
-        version = "0.1.482";
+        version = "0.1.483";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/shikumi";
-          rev = "e33fc72f62a6fc95820ae81cd07e67d0ca6a8603";
-          sha256 = "03ax33nhnp10rj8478n5q2yn8qx0p2m2dq9zmmsd7ivsnkbvq9v3";
+          rev = "f499f44aee33556be66285e8de022f7bf7cbb144";
+          sha256 = "1hagah657fq3ldn5qx0idwl57nbvzpl5dd6c3nrdxp9hgxj7ixy9";
         };
         dependencies = [
           {
@@ -9246,7 +9246,7 @@ rec {
       };
       "zoekt-mcp" = rec {
         crateName = "zoekt-mcp";
-        version = "0.1.6";
+        version = "0.1.7";
         edition = "2021";
         crateBin = [
           {

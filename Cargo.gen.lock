@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "861607e840e69be2045843b9d69cbb254f2a015081082ff5c3b25c16289704ce",
+  "cargo_lock_sha256": "ff92fee0210f28b7fd3dfca27c9740be58d397f8045ad36c233da851181fc531",
   "manifest_sha256": {
-    "Cargo.toml": "d5c3c0ac4e0bd0b3251f8e90e5383d653971b650c4feca707bf5ad645eca33d4"
+    "Cargo.toml": "99fc91f5bad8bbfc920f29dda3685bcb2f6ed83fbc0d1243e73bdd0d38950f8d"
   },
   "target_resolves": {
     "base": {
@@ -4674,7 +4674,7 @@
           "tilde"
         ]
       },
-      "shikumi-0.1.483-f499f44aee33556be66285e8de022f7bf7cbb144": {
+      "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074": {
         "runtime_dependencies": [
           {
             "name": "arc_swap",
@@ -6769,7 +6769,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zoekt-mcp-0.1.6": {
+      "zoekt-mcp-0.1.7": {
         "runtime_dependencies": [
           {
             "name": "anyhow",
@@ -6883,7 +6883,7 @@
           },
           {
             "name": "shikumi",
-            "package_key": "shikumi-0.1.483-f499f44aee33556be66285e8de022f7bf7cbb144",
+            "package_key": "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074",
             "kind": "normal",
             "features": [
               "cli"
@@ -9843,7 +9843,7 @@
     "shellexpand-3.1.2": {
       "edition": "2018"
     },
-    "shikumi-0.1.483-f499f44aee33556be66285e8de022f7bf7cbb144": {
+    "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074": {
       "edition": "2024"
     },
     "shlex-2.0.1": {
@@ -10061,7 +10061,7 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "zoekt-mcp-0.1.6": {
+    "zoekt-mcp-0.1.7": {
       "edition": "2021",
       "lib_target": {
         "name": "zoekt_mcp",
@@ -10076,7 +10076,7 @@
     }
   },
   "git_nar_sha256": {
-    "shikumi-0.1.483-f499f44aee33556be66285e8de022f7bf7cbb144": "sha256-yfd4ZH8w3d6yHcy0Vuj9e9lTKG8RdFxsowO7UwxUT8E="
+    "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074": "sha256-8Tgq9eYpi44Ca9SmCgXjlXZifX0fF0/eSOlrHyUuCDo="
   },
   "flake_metadata": {}
 }
