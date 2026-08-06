@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "e4b51db872db321dd6e86b600c64580b98f8ef1bb48eede797d112b41a62bd9b",
+  "cargo_lock_sha256": "0cba6e2159ed5a0ee172f33cc956481340413243a453e7147a56218a1cfa4163",
   "manifest_sha256": {
-    "Cargo.toml": "d672721da6748e144d7297a6f5d26ce5d63ce3ba59c46d22cff3091943dc8907"
+    "Cargo.toml": "4555b32b137c1a657d65075073b3d2a69b714fbc20b4c2325ebd8d42137e16b2"
   },
   "target_resolves": {
     "base": {
@@ -6769,7 +6769,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zoekt-mcp-0.1.5": {
+      "zoekt-mcp-0.1.6": {
         "runtime_dependencies": [
           {
             "name": "anyhow",
@@ -10061,7 +10061,7 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "zoekt-mcp-0.1.5": {
+    "zoekt-mcp-0.1.6": {
       "edition": "2021",
       "lib_target": {
         "name": "zoekt_mcp",

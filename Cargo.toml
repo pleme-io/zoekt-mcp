@@ -19,7 +19,7 @@ resolver = "3"
 # without downgrading anything that works today.
 rust-version = "1.95.0"
 name = "zoekt-mcp"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 license = "MIT"
 authors = ["Pleme Team <team@pleme.io>"]
