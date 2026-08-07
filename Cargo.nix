@@ -5319,14 +5319,9 @@ rec {
       };
       "shikumi" = rec {
         crateName = "shikumi";
-        version = "0.1.483";
+        version = "0.1.496";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/shikumi";
-          rev = "f499f44aee33556be66285e8de022f7bf7cbb144";
-          sha256 = "1hagah657fq3ldn5qx0idwl57nbvzpl5dd6c3nrdxp9hgxj7ixy9";
-        };
+        sha256 = "0hdgnvbv7g9hn134i8rrq5hyl394d1hcv8r00930dcycm4s5j56y";
         dependencies = [
           {
             name = "arc-swap";
@@ -5402,10 +5397,10 @@ rec {
         features = {
           "akeyless-native" = [ "dep:akeyless-api" "dep:tokio" ];
           "aws-native" = [ "dep:aws-sdk-secretsmanager" "dep:aws-config" "dep:tokio" ];
-          "blake3" = [ "dep:blake3" ];
           "blue" = [ "dep:blue-lang-syntax" "lisp" ];
           "cli" = [ "dep:clap" ];
           "gcp-native" = [ "dep:reqwest" "dep:tokio" ];
+          "hotswap" = [ "dep:pleme-hotswap" "dep:blake3" ];
           "kube" = [ "kube-discovery" "dep:reqwest" "reqwest/blocking" "dep:base64" ];
           "kube-discovery" = [ "dep:kanchi" ];
           "lisp" = [ "dep:tatara-lisp" ];
@@ -9246,7 +9241,7 @@ rec {
       };
       "zoekt-mcp" = rec {
         crateName = "zoekt-mcp";
-        version = "0.1.7";
+        version = "0.1.8";
         edition = "2021";
         crateBin = [
           {

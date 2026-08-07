@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "894da6df307568235e3c6de385f083206ed174fdbcc7c862b3b28dcc577d7952",
+  "cargo_lock_sha256": "706bda97aab022d2feedbebc078d0fcad9ff822bdb1003126c72ffcf70858759",
   "manifest_sha256": {
-    "Cargo.toml": "71483e848f142c04a7e46d65e08760ef7c12f307e92eaac38e0596d1e2caf649"
+    "Cargo.toml": "754cf7786dcd7c1b132ae47d1128e6f799390d986ca21697dc53d4fd69d148dc"
   },
   "target_resolves": {
     "base": {
@@ -314,11 +314,11 @@
           "windows-link"
         ]
       },
-      "clap-4.6.5": {
+      "clap-4.6.6": {
         "runtime_dependencies": [
           {
             "name": "clap_builder",
-            "package_key": "clap_builder-4.6.5",
+            "package_key": "clap_builder-4.6.6",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -349,7 +349,7 @@
           "usage"
         ]
       },
-      "clap_builder-4.6.5": {
+      "clap_builder-4.6.6": {
         "runtime_dependencies": [
           {
             "name": "anstream",
@@ -4698,7 +4698,7 @@
           },
           {
             "name": "clap",
-            "package_key": "clap-4.6.5",
+            "package_key": "clap-4.6.6",
             "kind": "normal",
             "features": [
               "derive"
@@ -6769,7 +6769,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zoekt-mcp-0.1.7": {
+      "zoekt-mcp-0.1.8": {
         "runtime_dependencies": [
           {
             "name": "anyhow",
@@ -6793,7 +6793,7 @@
           },
           {
             "name": "clap",
-            "package_key": "clap-4.6.5",
+            "package_key": "clap-4.6.6",
             "kind": "normal",
             "features": [
               "derive"
@@ -9399,7 +9399,7 @@
     "chrono-0.4.45": {
       "edition": "2021"
     },
-    "clap-4.6.5": {
+    "clap-4.6.6": {
       "edition": "2024",
       "binaries": [
         {
@@ -9408,7 +9408,7 @@
         }
       ]
     },
-    "clap_builder-4.6.5": {
+    "clap_builder-4.6.6": {
       "edition": "2024"
     },
     "clap_derive-4.6.4": {
@@ -10061,7 +10061,7 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "zoekt-mcp-0.1.7": {
+    "zoekt-mcp-0.1.8": {
       "edition": "2021",
       "lib_target": {
         "name": "zoekt_mcp",
