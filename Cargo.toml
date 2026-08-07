@@ -63,7 +63,7 @@ serde_yaml = "0.9"
 # Configuration prime directive — DaemonConfig + CtagsConfig +
 # WebserverConfig impl shikumi::TieredConfig (bare/discovered/
 # prescribed_default). Operators reach via ZOEKT_MCP_TIER env var.
-shikumi = { git = "https://github.com/pleme-io/shikumi", branch = "main", features = ["cli"] }
+shikumi = { version = "0.1", features = ["cli"] }
 shellexpand = "3"
 base64 = "0.22"
 tracing = "0.1"

@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "ff92fee0210f28b7fd3dfca27c9740be58d397f8045ad36c233da851181fc531",
+  "cargo_lock_sha256": "894da6df307568235e3c6de385f083206ed174fdbcc7c862b3b28dcc577d7952",
   "manifest_sha256": {
-    "Cargo.toml": "99fc91f5bad8bbfc920f29dda3685bcb2f6ed83fbc0d1243e73bdd0d38950f8d"
+    "Cargo.toml": "71483e848f142c04a7e46d65e08760ef7c12f307e92eaac38e0596d1e2caf649"
   },
   "target_resolves": {
     "base": {
@@ -4674,7 +4674,7 @@
           "tilde"
         ]
       },
-      "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074": {
+      "shikumi-0.1.496": {
         "runtime_dependencies": [
           {
             "name": "arc_swap",
@@ -6883,7 +6883,7 @@
           },
           {
             "name": "shikumi",
-            "package_key": "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074",
+            "package_key": "shikumi-0.1.496",
             "kind": "normal",
             "features": [
               "cli"
@@ -9843,7 +9843,7 @@
     "shellexpand-3.1.2": {
       "edition": "2018"
     },
-    "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074": {
+    "shikumi-0.1.496": {
       "edition": "2024"
     },
     "shlex-2.0.1": {
@@ -10075,8 +10075,6 @@
       ]
     }
   },
-  "git_nar_sha256": {
-    "shikumi-0.1.483-b8fbda824b05e56817ac5285feb95a97c8832074": "sha256-8Tgq9eYpi44Ca9SmCgXjlXZifX0fF0/eSOlrHyUuCDo="
-  },
+  "git_nar_sha256": {},
   "flake_metadata": {}
 }
