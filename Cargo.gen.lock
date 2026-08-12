@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "706bda97aab022d2feedbebc078d0fcad9ff822bdb1003126c72ffcf70858759",
+  "cargo_lock_sha256": "b1575ee926275912a86bac49c7f3691110af66d2d2adf1ae55e6594e659b0254",
   "manifest_sha256": {
-    "Cargo.toml": "754cf7786dcd7c1b132ae47d1128e6f799390d986ca21697dc53d4fd69d148dc"
+    "Cargo.toml": "171496d0e6106ef90aae7984264598d1fbf2dc6498f2f19f5ddb358ec1f9c690"
   },
   "target_resolves": {
     "base": {
@@ -2723,6 +2723,11 @@
             "tree": "host"
           }
         ],
+        "features": []
+      },
+      "okiba-0.1.1": {
+        "runtime_dependencies": [],
+        "build_dependencies": [],
         "features": []
       },
       "once_cell-1.21.4": {
@@ -6814,6 +6819,16 @@
             "tree": "target"
           },
           {
+            "name": "okiba",
+            "package_key": "okiba-0.1.1",
+            "kind": "normal",
+            "features": [],
+            "uses_default_features": true,
+            "optional": false,
+            "target": null,
+            "tree": "target"
+          },
+          {
             "name": "reqwest",
             "package_key": "reqwest-0.12.28",
             "kind": "normal",
@@ -9664,6 +9679,9 @@
     "num-traits-0.2.19": {
       "edition": "2021",
       "build_script": "build.rs"
+    },
+    "okiba-0.1.1": {
+      "edition": "2024"
     },
     "once_cell-1.21.4": {
       "edition": "2021"

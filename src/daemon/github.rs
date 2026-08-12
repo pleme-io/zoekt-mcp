@@ -57,14 +57,21 @@ const TEND_CACHE_TTL_SECS: u64 = 6 * 60 * 60;
 /// `~/.cache/tend/discovery` when unset. Mirrors
 /// `tend::cache::tend_cache_root()` (tend/src/cache.rs).
 fn tend_discovery_cache_dir() -> PathBuf {
-    std::env::var("XDG_CACHE_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs::home_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join(".cache")
-        })
-        .join("tend")
+    // okiba resolves the tier and REFUSES a relative override rather than
+    // resolving it against the cwd (the XDG spec's rule, which the hand-rolled
+    // version above ignored — a relative XDG_CACHE_HOME scattered the cache
+    // per-working-directory). `from_env` rather than `for_app` so
+    // `dirs::home_dir()` still backs $HOME: a launchd/systemd unit with HOME
+    // unset resolves via getpwuid, which a bare `for_app` would have lost.
+    okiba::Okiba::from_env("tend", |k| match k {
+        "HOME" => std::env::var("HOME").ok().or_else(|| {
+            dirs::home_dir().map(|p| p.to_string_lossy().into_owned())
+        }),
+        other => std::env::var(other).ok(),
+    })
+    .base(okiba::Tier::Cache)
+    .unwrap_or_else(|_| std::env::temp_dir())
+    .join("tend")
         .join("discovery")
 }
 
