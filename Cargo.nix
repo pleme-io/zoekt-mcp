@@ -667,10 +667,10 @@ rec {
       };
       "clap" = rec {
         crateName = "clap";
-        version = "4.6.5";
+        version = "4.6.6";
         edition = "2024";
         crateBin = [];
-        sha256 = "1pyaq1cfrwzwcfdlxynxiq8fgrvvi3yccyk490v8zr4qhmjmc6rh";
+        sha256 = "1jmx5z8d6jbvxdz6dybh599s4rd7ns6sl90p2rrdga09yh3pwg27";
         dependencies = [
           {
             name = "clap_builder";
@@ -709,9 +709,9 @@ rec {
       };
       "clap_builder" = rec {
         crateName = "clap_builder";
-        version = "4.6.5";
+        version = "4.6.6";
         edition = "2024";
-        sha256 = "0y500wa2x3jqvsc95dgcbvp0hj47x038bsv8vkvjigd1s41m99ll";
+        sha256 = "12cqg25zpjc3k82cpqa2v9h7s3vk1vydpgnwl8lfg6lfm2jzwj3v";
         dependencies = [
           {
             name = "anstream";
@@ -3294,6 +3294,13 @@ rec {
           "default" = [ "std" ];
           "libm" = [ "dep:libm" ];
         };
+      };
+      "okiba" = rec {
+        crateName = "okiba";
+        version = "0.1.1";
+        edition = "2024";
+        sha256 = "1xr0czg5zrb5mcc1pkdgyzpwyysnva7x8i5xhcijh4y3kahc3yb8";
+
       };
       "once_cell" = rec {
         crateName = "once_cell";
@@ -9241,7 +9248,7 @@ rec {
       };
       "zoekt-mcp" = rec {
         crateName = "zoekt-mcp";
-        version = "0.1.8";
+        version = "0.1.9";
         edition = "2021";
         crateBin = [
           {
@@ -9272,6 +9279,10 @@ rec {
           {
             name = "dirs";
             packageId = "dirs";
+          }
+          {
+            name = "okiba";
+            packageId = "okiba";
           }
           {
             name = "reqwest";
